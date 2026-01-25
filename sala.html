@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO! - Em Jogo</title>
+    <link rel="stylesheet" href="estilo.css">
+    <style>
+        /* Estilos específicos da mesa que não estão no estilo.css */
+        body { background: radial-gradient(circle, #1a472a 0%, #0f0f0f 100%); } /* Fundo verde feltro de mesa */
+
+        .mesa-container {
+            width: 100vw;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 150px 1fr 180px;
+            align-items: center;
+        }
+
+        /* Área do topo (Oponentes) */
+        .oponentes {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        /* Centro (Baralho e Descarte) */
+        .centro-jogo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 50px;
+        }
+
+        .deck, .descarte {
+            width: 100px;
+            height: 150px;
+            border-radius: 10px;
+            border: 3px solid white;
+            position: relative;
+        }
+
+        .deck {
+            background: repeating-linear-gradient(45deg, #ff5555, #ff5555 10px, #aa0000 10px, #aa0000 20px);
+            cursor: pointer;
+            box-shadow: 5px 5px 0px #444;
+        }
+
+        /* Sua mão (Cartas embaixo) */
+        .minha-mao {
+            display: flex;
+            justify-content: center;
+            gap: -20px; /* Sobreposição das cartas */
+            padding-bottom: 20px;
+        }
+
+        .minha-mao .mini-card {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .minha-mao .mini-card:hover {
+            transform: translateY(-30px) scale(1.1) !important;
+            z-index: 100 !important;
+        }
+
+        .btn-uno {
+            position: absolute;
+            right: 30px;
+            bottom: 200px;
+            width: 80px;
+            height: 80px;
+            background: var(--uno-red);
+            border: 5px solid white;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mesa-container">
+        <div class="oponentes">
+            <div class="mini-card" style="background: #333; width: 50px; height: 80px;"></div>
+            <div class="mini-card" style="background: #333; width: 50px; height: 80px;"></div>
+            <div class="mini-card" style="background: #333; width: 50px; height: 80px;"></div>
+        </div>
+
+        <div class="centro-jogo">
+            <div class="deck" title="Comprar Carta"></div>
+            <div id="pilha-descarte" class="mini-card blue" style="width: 100px; height: 150px; font-size: 4rem;">
+                7
+            </div>
+        </div>
+
+        <button class="btn-uno">UNO!</button>
+
+        <div class="minha-mao">
+            <div class="mini-card red">2</div>
+            <div class="mini-card blue">5</div>
+            <div class="mini-card yellow">R</div>
+            <div class="mini-card green">+2</div>
+            <div class="mini-card red">0</div>
+        </div>
+    </div>
+
+</body>
+</html>
