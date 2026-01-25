@@ -9,13 +9,23 @@
 <body>
 
     <div class="bg-cards">
-        <div class="card-shape" style="background: var(--uno-red); transform: rotate(-20deg);"></div>
-        <div class="card-shape" style="background: var(--uno-blue); transform: translateY(-50px) rotate(10deg);"></div>
-        <div class="card-shape" style="background: var(--uno-green); transform: rotate(25deg);"></div>
-        <div class="card-shape" style="background: var(--uno-yellow); transform: translateY(60px) rotate(-10deg);"></div>
+        <div class="card-shape c-red" style="left: 5%; animation-delay: 0s;">9</div>
+        <div class="card-shape c-blue" style="left: 15%; animation-delay: -5s;">+2</div>
+        <div class="card-shape c-green" style="left: 30%; animation-delay: -2s;">R</div>
+        <div class="card-shape c-yellow" style="left: 50%; animation-delay: -10s;">5</div>
+        <div class="card-shape c-red" style="left: 70%; animation-delay: -7s;">Ø</div>
+        <div class="card-shape c-blue" style="left: 85%; animation-delay: -3s;">7</div>
+        <div class="card-shape c-green" style="left: 40%; animation-delay: -12s;">2</div>
+        <div class="card-shape c-yellow" style="left: 90%; animation-delay: -15s;">+2</div>
     </div>
 
     <div class="lobby-container">
+        <div class="topo-cartas">
+            <div class="mini-card red">7</div>
+            <div class="mini-card blue">7</div>
+            <div class="mini-card yellow">7</div>
+        </div>
+
         <h1>UNO!</h1>
         
         <div class="input-group">
@@ -28,6 +38,13 @@
 
         <button class="btn-play">CRIAR MESA</button>
         <button class="btn-play btn-join">ENTRAR NA SALA</button>
+
+        <div style="margin-top: 15px;">
+            <select id="languageSelect" style="background: transparent; color: #777; border: 1px solid #444; border-radius: 5px; padding: 5px; cursor: pointer;">
+                <option value="pt">Português</option>
+                <option value="en">English</option>
+            </select>
+        </div>
 
         <p style="margin-top: 20px; font-size: 0.8rem; color: #777;">Prepare suas cartas e diga UNO!</p>
     </div>
