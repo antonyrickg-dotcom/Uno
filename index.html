@@ -29,24 +29,24 @@
         <h1>UNO!</h1>
         
         <div class="input-group">
-            <input type="text" placeholder="Seu apelido...">
+            <input type="text" id="username" placeholder="Seu apelido...">
         </div>
 
         <div class="input-group">
-            <input type="text" placeholder="Código da sala (opcional)">
+            <input type="text" id="roomCode" placeholder="Código da sala (opcional)">
         </div>
 
         <button class="btn-play">CRIAR MESA</button>
         <button class="btn-play btn-join">ENTRAR NA SALA</button>
 
         <div style="margin-top: 15px;">
-            <select id="languageSelect" style="background: transparent; color: #777; border: 1px solid #444; border-radius: 5px; padding: 5px; cursor: pointer;">
+            <select id="languageSelect" style="background: rgba(0,0,0,0.3); color: #ccc; border: 1px solid #444; border-radius: 5px; padding: 5px; cursor: pointer; font-family: inherit;">
                 <option value="pt">Português</option>
                 <option value="en">English</option>
             </select>
         </div>
 
-        <p style="margin-top: 20px; font-size: 0.8rem; color: #777;">Prepare suas cartas e diga UNO!</p>
+        <p id="footer-text" style="margin-top: 20px; font-size: 0.8rem; color: #777;">Prepare suas cartas e diga UNO!</p>
     </div>
 
 </body>
