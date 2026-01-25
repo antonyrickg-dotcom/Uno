@@ -1,4 +1,4 @@
-/* Cores Oficiais */
+/* --- CONFIGURAÇÕES GERAIS --- */
 :root {
     --uno-red: #ff5555;
     --uno-blue: #5555ff;
@@ -6,7 +6,7 @@
     --uno-yellow: #ffaa00;
     --uno-black: #222;
     --uno-white: #ffffff;
-    --bg-dark: #121212;
+    --bg-dark: #0f0f0f;
 }
 
 body {
@@ -22,7 +22,7 @@ body {
     overflow: hidden;
 }
 
-/* --- BACKGROUND COM CARTAS INFINITAS --- */
+/* --- BACKGROUND COM CARTAS INFINITAS (GIRANDO E SUBINDO) --- */
 .bg-cards {
     position: absolute;
     width: 100%;
@@ -36,75 +36,85 @@ body {
     width: 80px;
     height: 120px;
     border-radius: 8px;
-    border: 4px solid rgba(255, 255, 255, 0.2);
+    border: 3px solid white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    color: white;
     opacity: 0.15;
-    animation: flutuarLento 20s linear infinite; /* Movimento bem devagar */
+    animation: flutuarLento 22s linear infinite;
 }
 
+.c-red { background: var(--uno-red); }
+.c-blue { background: var(--uno-blue); }
+.c-green { background: var(--uno-green); }
+.c-yellow { background: var(--uno-yellow); }
+
 @keyframes flutuarLento {
-    0% {
-        transform: translateY(110vh) rotate(0deg);
-    }
-    100% {
-        transform: translateY(-20vh) rotate(360deg);
-    }
+    0% { transform: translateY(110vh) rotate(0deg); }
+    100% { transform: translateY(-20vh) rotate(360deg); }
 }
 
 /* --- CARTAS 7 NO TOPO DO LOBBY --- */
 .topo-cartas {
     display: flex;
     justify-content: center;
-    gap: -15px; /* Efeito de sobreposição */
-    margin-bottom: -15px;
+    gap: -15px;
+    margin-bottom: -35px; /* Puxa o título para perto */
     perspective: 1000px;
+    position: relative;
+    z-index: 11;
 }
 
 .mini-card {
-    width: 60px;
-    height: 90px;
+    width: 65px;
+    height: 95px;
     border: 3px solid white;
-    border-radius: 6px;
+    border-radius: 8px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 2.5rem;
+    font-size: 2.8rem;
     font-weight: bold;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-    position: relative;
+    color: white;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
 }
 
-.c1 { background: var(--uno-red); transform: rotate(-15deg) translateX(15px); z-index: 1; }
-.c2 { background: var(--uno-blue); z-index: 2; }
-.c3 { background: var(--uno-yellow); transform: rotate(15deg) translateX(-15px); z-index: 1; }
+.red { background: var(--uno-red); transform: rotate(-15deg) translateX(20px); z-index: 1; }
+.blue { background: var(--uno-blue); z-index: 2; transform: translateY(-10px); }
+.yellow { background: var(--uno-yellow); transform: rotate(15deg) translateX(-20px); z-index: 1; }
 
-/* --- CONTAINER DO LOBBY --- */
+/* --- CONTAINER DO LOBBY (ESTILO GLASSMORPHISM) --- */
 .lobby-container {
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(12px);
-    padding: 40px;
-    border-radius: 24px;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    padding: 50px 35px 35px;
+    border-radius: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     text-align: center;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
     width: 350px;
     z-index: 10;
 }
 
 h1 {
-    font-size: 3.5rem;
-    margin: 10px 0 30px;
-    text-shadow: 4px 4px var(--uno-red);
-    letter-spacing: -3px;
+    font-size: 4rem;
+    margin: 15px 0 30px;
     font-style: italic;
+    text-shadow: 4px 4px var(--uno-red), -2px -2px var(--uno-blue);
+    letter-spacing: -4px;
+    color: white;
 }
 
+/* --- INPUTS E BOTÕES --- */
 .input-group {
     margin-bottom: 20px;
 }
 
 input {
     width: 100%;
-    padding: 12px;
+    padding: 15px;
     border-radius: 10px;
     border: none;
     background: #1a1a1a;
@@ -114,6 +124,7 @@ input {
     outline: none;
     border-bottom: 3px solid var(--uno-yellow);
     transition: 0.3s;
+    font-family: inherit;
 }
 
 input:focus {
@@ -123,7 +134,7 @@ input:focus {
 
 .btn-play {
     width: 100%;
-    padding: 15px;
+    padding: 16px;
     border-radius: 10px;
     border: none;
     background: var(--uno-green);
@@ -132,22 +143,26 @@ input:focus {
     font-weight: bold;
     cursor: pointer;
     transition: 0.3s;
-    box-shadow: 0 4px 0 #2d5a2d;
-    margin-bottom: 10px;
+    box-shadow: 0 5px 0 #2d5a2d;
+    margin-bottom: 12px;
 }
 
 .btn-play:hover {
     transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 7px 0 #2d5a2d;
+    box-shadow: 0 8px 0 #2d5a2d;
     filter: brightness(1.1);
 }
 
 .btn-join {
     background: var(--uno-blue);
-    box-shadow: 0 4px 0 #323299;
-    margin-top: 5px;
+    box-shadow: 0 5px 0 #323299;
 }
 
 .btn-join:hover {
-    box-shadow: 0 7px 0 #323299;
+    box-shadow: 0 8px 0 #323299;
+}
+
+select {
+    font-family: inherit;
+    font-weight: bold;
 }
