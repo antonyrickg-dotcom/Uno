@@ -4,7 +4,6 @@
     --uno-blue: #5555ff;
     --uno-green: #55aa55;
     --uno-yellow: #ffaa00;
-    --uno-black: #222;
     --uno-white: #ffffff;
     --bg-dark: #0f0f0f;
 }
@@ -22,7 +21,7 @@ body {
     overflow: hidden;
 }
 
-/* --- BACKGROUND COM CARTAS INFINITAS (GIRANDO E SUBINDO) --- */
+/* --- BACKGROUND COM CARTAS COLORIDAS --- */
 .bg-cards {
     position: absolute;
     width: 100%;
@@ -35,33 +34,34 @@ body {
     position: absolute;
     width: 80px;
     height: 120px;
-    border-radius: 8px;
+    border-radius: 10px;
     border: 3px solid white;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 2rem;
     color: white;
-    opacity: 0.15;
+    opacity: 0.2; /* Cartas do fundo mais suaves */
     animation: flutuarLento 22s linear infinite;
 }
 
-.c-red { background: var(--uno-red); }
-.c-blue { background: var(--uno-blue); }
-.c-green { background: var(--uno-green); }
-.c-yellow { background: var(--uno-yellow); }
+/* Cores das cartas do fundo */
+.c-red { background-color: var(--uno-red); }
+.c-blue { background-color: var(--uno-blue); }
+.c-green { background-color: var(--uno-green); }
+.c-yellow { background-color: var(--uno-yellow); }
 
 @keyframes flutuarLento {
     0% { transform: translateY(110vh) rotate(0deg); }
     100% { transform: translateY(-20vh) rotate(360deg); }
 }
 
-/* --- CARTAS 7 NO TOPO DO LOBBY --- */
+/* --- AS TRÊS CARTAS 7 NO TOPO --- */
 .topo-cartas {
     display: flex;
     justify-content: center;
     gap: -15px;
-    margin-bottom: -35px; /* Puxa o título para perto */
+    margin-bottom: -35px;
     perspective: 1000px;
     position: relative;
     z-index: 11;
@@ -81,11 +81,24 @@ body {
     box-shadow: 0 8px 20px rgba(0,0,0,0.6);
 }
 
-.red { background: var(--uno-red); transform: rotate(-15deg) translateX(20px); z-index: 1; }
-.blue { background: var(--uno-blue); z-index: 2; transform: translateY(-10px); }
-.yellow { background: var(--uno-yellow); transform: rotate(15deg) translateX(-20px); z-index: 1; }
+/* Forçando as cores das cartas 7 */
+.mini-card.red { 
+    background-color: var(--uno-red) !important; 
+    transform: rotate(-15deg) translateX(20px); 
+    z-index: 1; 
+}
+.mini-card.blue { 
+    background-color: var(--uno-blue) !important; 
+    z-index: 2; 
+    transform: translateY(-10px); 
+}
+.mini-card.yellow { 
+    background-color: var(--uno-yellow) !important; 
+    transform: rotate(15deg) translateX(-20px); 
+    z-index: 1; 
+}
 
-/* --- CONTAINER DO LOBBY (ESTILO GLASSMORPHISM) --- */
+/* --- CONTAINER LOBBY --- */
 .lobby-container {
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(12px);
@@ -107,11 +120,6 @@ h1 {
     color: white;
 }
 
-/* --- INPUTS E BOTÕES --- */
-.input-group {
-    margin-bottom: 20px;
-}
-
 input {
     width: 100%;
     padding: 15px;
@@ -125,6 +133,7 @@ input {
     border-bottom: 3px solid var(--uno-yellow);
     transition: 0.3s;
     font-family: inherit;
+    margin-bottom: 15px;
 }
 
 input:focus {
@@ -160,9 +169,4 @@ input:focus {
 
 .btn-join:hover {
     box-shadow: 0 8px 0 #323299;
-}
-
-select {
-    font-family: inherit;
-    font-weight: bold;
 }
