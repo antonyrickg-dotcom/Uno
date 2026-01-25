@@ -21,7 +21,21 @@ body {
     overflow: hidden;
 }
 
-/* --- BACKGROUND COM CARTAS COLORIDAS --- */
+/* --- ESTILO BASE DAS CARTAS (Com brilho central) --- */
+.card-shape, .mini-card {
+    border: 3px solid white;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+    /* Brilho oval clássico do UNO no centro */
+    background-image: radial-gradient(ellipse at center, rgba(255,255,255,0.3) 0%, transparent 80%);
+}
+
+/* --- BACKGROUND ANIMADO --- */
 .bg-cards {
     position: absolute;
     width: 100%;
@@ -34,14 +48,8 @@ body {
     position: absolute;
     width: 80px;
     height: 120px;
-    border-radius: 10px;
-    border: 3px solid white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     font-size: 2rem;
-    color: white;
-    opacity: 0.2; /* Cartas do fundo mais suaves */
+    opacity: 0.2;
     animation: flutuarLento 22s linear infinite;
 }
 
@@ -70,18 +78,9 @@ body {
 .mini-card {
     width: 65px;
     height: 95px;
-    border: 3px solid white;
-    border-radius: 8px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     font-size: 2.8rem;
-    font-weight: bold;
-    color: white;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
 }
 
-/* Forçando as cores das cartas 7 */
 .mini-card.red { 
     background-color: var(--uno-red) !important; 
     transform: rotate(-15deg) translateX(20px); 
@@ -118,8 +117,10 @@ h1 {
     text-shadow: 4px 4px var(--uno-red), -2px -2px var(--uno-blue);
     letter-spacing: -4px;
     color: white;
+    transform: skewX(-5deg);
 }
 
+/* --- INPUTS E BOTÕES --- */
 input {
     width: 100%;
     padding: 15px;
