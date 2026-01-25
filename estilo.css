@@ -22,43 +22,80 @@ body {
     overflow: hidden;
 }
 
-/* Background com Cartas Flutuantes (Efeito Visual) */
+/* --- BACKGROUND COM CARTAS INFINITAS --- */
 .bg-cards {
     position: absolute;
     width: 100%;
     height: 100%;
     z-index: -1;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    opacity: 0.15;
+    overflow: hidden;
 }
 
 .card-shape {
+    position: absolute;
     width: 80px;
     height: 120px;
     border-radius: 8px;
-    border: 4px solid white;
-    transform: rotate(15deg);
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    opacity: 0.15;
+    animation: flutuarLento 20s linear infinite; /* Movimento bem devagar */
 }
 
-/* Container do Lobby */
+@keyframes flutuarLento {
+    0% {
+        transform: translateY(110vh) rotate(0deg);
+    }
+    100% {
+        transform: translateY(-20vh) rotate(360deg);
+    }
+}
+
+/* --- CARTAS 7 NO TOPO DO LOBBY --- */
+.topo-cartas {
+    display: flex;
+    justify-content: center;
+    gap: -15px; /* Efeito de sobreposição */
+    margin-bottom: -15px;
+    perspective: 1000px;
+}
+
+.mini-card {
+    width: 60px;
+    height: 90px;
+    border: 3px solid white;
+    border-radius: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.5rem;
+    font-weight: bold;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+    position: relative;
+}
+
+.c1 { background: var(--uno-red); transform: rotate(-15deg) translateX(15px); z-index: 1; }
+.c2 { background: var(--uno-blue); z-index: 2; }
+.c3 { background: var(--uno-yellow); transform: rotate(15deg) translateX(-15px); z-index: 1; }
+
+/* --- CONTAINER DO LOBBY --- */
 .lobby-container {
     background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
     padding: 40px;
-    border-radius: 20px;
+    border-radius: 24px;
     border: 2px solid rgba(255, 255, 255, 0.1);
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.6);
     width: 350px;
+    z-index: 10;
 }
 
 h1 {
-    font-size: 3rem;
-    margin-bottom: 30px;
-    text-shadow: 3px 3px var(--uno-red), -3px -3px var(--uno-blue);
-    letter-spacing: -2px;
+    font-size: 3.5rem;
+    margin: 10px 0 30px;
+    text-shadow: 4px 4px var(--uno-red);
+    letter-spacing: -3px;
+    font-style: italic;
 }
 
 .input-group {
@@ -68,20 +105,26 @@ h1 {
 input {
     width: 100%;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: 10px;
     border: none;
-    background: #222;
+    background: #1a1a1a;
     color: white;
     font-size: 1rem;
     box-sizing: border-box;
     outline: none;
     border-bottom: 3px solid var(--uno-yellow);
+    transition: 0.3s;
+}
+
+input:focus {
+    border-bottom-color: var(--uno-green);
+    background: #222;
 }
 
 .btn-play {
     width: 100%;
     padding: 15px;
-    border-radius: 8px;
+    border-radius: 10px;
     border: none;
     background: var(--uno-green);
     color: white;
@@ -89,17 +132,22 @@ input {
     font-weight: bold;
     cursor: pointer;
     transition: 0.3s;
-    box-shadow: 0 4px 0 #3d7a3d;
+    box-shadow: 0 4px 0 #2d5a2d;
+    margin-bottom: 10px;
 }
 
 .btn-play:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 0 #3d7a3d;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 7px 0 #2d5a2d;
     filter: brightness(1.1);
 }
 
 .btn-join {
     background: var(--uno-blue);
-    box-shadow: 0 4px 0 #3d3dbf;
-    margin-top: 10px;
+    box-shadow: 0 4px 0 #323299;
+    margin-top: 5px;
+}
+
+.btn-join:hover {
+    box-shadow: 0 7px 0 #323299;
 }
