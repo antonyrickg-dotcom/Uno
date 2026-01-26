@@ -39,7 +39,6 @@ async function setupInicial() {
 
     if (!dados) return;
 
-    // Se eu ainda não tenho cartas, recebo 7 agora
     if (!dados.jogadores[meuNick].mao) {
         let novaMao = [];
         for (let i = 0; i < 7; i++) {
@@ -48,7 +47,6 @@ async function setupInicial() {
         await set(ref(db, `salas/${salaID}/jogadores/${meuNick}/mao`), novaMao);
     }
 
-    // Se sou o dono e não tem carta na mesa, coloco a primeira
     if (dados.dono === meuNick && !dados.cartaNaMesa) {
         await update(ref(db, `salas/${salaID}`), {
             cartaNaMesa: gerarCarta(),
@@ -64,18 +62,22 @@ onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     const dados = snapshot.val();
     if (!dados) return;
 
-    // 1. Atualiza a carta da mesa
+    // 1. Atualiza a carta da mesa com visual realista
     const cartaMesaDiv = document.getElementById('cartaMesa');
     if (dados.cartaNaMesa) {
         cartaMesaDiv.className = dados.cartaNaMesa.cor;
-        cartaMesaDiv.innerText = dados.cartaNaMesa.valor;
+        cartaMesaDiv.innerHTML = `
+            <div class="canto topo-esq">${dados.cartaNaMesa.valor}</div>
+            <span>${dados.cartaNaMesa.valor}</span>
+            <div class="canto baixo-dir">${dados.cartaNaMesa.valor}</div>
+        `;
     }
 
     // 2. Atualiza de quem é a vez
     document.getElementById('txtVez').innerText = dados.turno === meuNick ? "SUA VEZ!" : `Vez de ${dados.turno}`;
     document.getElementById('txtVez').style.color = dados.turno === meuNick ? "#4caf50" : "#ffeb3b";
 
-    // 3. Renderiza minha mão
+    // 3. Renderiza minha mão com visual realista
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
     const minhasCartas = dados.jogadores[meuNick].mao || [];
@@ -83,11 +85,13 @@ onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     minhasCartas.forEach((carta, index) => {
         const cardEl = document.createElement('div');
         cardEl.className = `card ${carta.cor}`;
-        cardEl.innerHTML = `<span>${carta.valor}</span>`;
+        cardEl.innerHTML = `
+            <div class="canto topo-esq">${carta.valor}</div>
+            <span>${carta.valor}</span>
+            <div class="canto baixo-dir">${carta.valor}</div>
+        `;
         
-        // Clique para jogar a carta
         cardEl.onclick = () => tentarJogarCarta(carta, index, dados);
-        
         minhaMaoDiv.appendChild(cardEl);
     });
 });
@@ -98,19 +102,15 @@ async function tentarJogarCarta(carta, index, dados) {
 
     const naMesa = dados.cartaNaMesa;
 
-    // Regra do UNO: Cor igual ou Valor igual
     if (carta.cor === naMesa.cor || carta.valor === naMesa.valor) {
-        // 1. Remove a carta da minha mão
         let novaMao = [...dados.jogadores[meuNick].mao];
         novaMao.splice(index, 1);
 
-        // 2. Define o próximo jogador (lógica simples de rodízio)
         const listaNomes = Object.keys(dados.jogadores);
         let meuIndex = listaNomes.indexOf(meuNick);
         let proximoIndex = (meuIndex + 1) % listaNomes.length;
         let proximoTurno = listaNomes[proximoIndex];
 
-        // 3. Atualiza o Firebase
         const updates = {};
         updates[`salas/${salaID}/cartaNaMesa`] = carta;
         updates[`salas/${salaID}/turno`] = proximoTurno;
