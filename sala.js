@@ -28,6 +28,12 @@ onValue(salaRef, (snapshot) => {
     const dados = snapshot.val();
     if (!dados) return;
 
+    // NOVIDADE: Verifica se o mestre deu o play no jogo
+    if (dados.status === "em_jogo") {
+        window.location.href = "jogo.html";
+        return;
+    }
+
     // 1. Atualiza Jogadores com visual melhorado
     const lista = document.getElementById('listaJogadores');
     lista.innerHTML = "";
@@ -66,6 +72,14 @@ onValue(salaRef, (snapshot) => {
 
 // --- FUNÇÕES DO DONO ---
 
+// Botão de COMEÇAR PARTIDA
+document.getElementById('btnComeçar').onclick = () => {
+    // Altera o status para disparar o redirecionamento em todos os jogadores
+    update(ref(db, `salas/${salaID}`), {
+        status: "em_jogo"
+    });
+};
+
 // Adicionar regra manual
 document.getElementById('btnAddRegra').onclick = () => {
     const texto = document.getElementById('inputNovaRegra').value.trim();
@@ -89,7 +103,6 @@ document.getElementById('btnAleatorio').onclick = async () => {
             "Pular próximo se for carta 5",
             "Mão invisível (esconde cartas)"
         ];
-        // Sorteia 2 regras da lista
         const sorteadas = sugestoes.sort(() => 0.5 - Math.random()).slice(0, 2);
         update(ref(db, `salas/${salaID}`), {
             modoAleatorio: true,
