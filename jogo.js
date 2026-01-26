@@ -23,17 +23,28 @@ document.getElementById('txtSalaID').innerText = salaID;
 
 // --- FUNÇÃO PARA GERAR UMA CARTA ALEATÓRIA ---
 function gerarCarta() {
-    // Cores que você tem (conforme o print: blue e red)
-    // Se adicionar green e yellow depois, é só manter aqui
-    const cores = ['red', 'blue', 'green', 'yellow']; 
-    
-    // Nomes exatos dos arquivos que vi no seu print (draw2, reverse, skip)
+    const cores = ['red', 'blue', 'green', 'yellow'];
     const valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'draw2'];
-    
     return {
         cor: cores[Math.floor(Math.random() * cores.length)],
         valor: valores[Math.floor(Math.random() * valores.length)]
     };
+}
+
+// --- FUNÇÃO PARA DESENHAR CARTA CASO A IMAGEM NÃO EXISTA ---
+function criarCartaReserva(carta, tamanho) {
+    const nomesEspeciais = { 'skip': '🚫', 'reverse': '🔄', 'draw2': '+2' };
+    const label = nomesEspeciais[carta.valor] || carta.valor;
+    const corHex = { 'red': '#ff5555', 'blue': '#5555ff', 'green': '#55aa55', 'yellow': '#ffaa00' }[carta.cor];
+
+    return `
+        <div style="width: ${tamanho}px; height: ${tamanho * 1.5}px; 
+                    background: ${corHex}; border: 4px solid white; 
+                    border-radius: 10px; display: flex; align-items: center; 
+                    justify-content: center; color: white; font-family: Arial; 
+                    font-weight: bold; font-size: 30px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);">
+            ${label}
+        </div>`;
 }
 
 // --- INICIALIZAÇÃO DA PARTIDA ---
@@ -41,14 +52,11 @@ async function setupInicial() {
     const salaRef = ref(db, `salas/${salaID}`);
     const snapshot = await get(salaRef);
     const dados = snapshot.val();
-
     if (!dados) return;
 
     if (!dados.jogadores[meuNick].mao) {
         let novaMao = [];
-        for (let i = 0; i < 7; i++) {
-            novaMao.push(gerarCarta());
-        }
+        for (let i = 0; i < 7; i++) novaMao.push(gerarCarta());
         await set(ref(db, `salas/${salaID}/jogadores/${meuNick}/mao`), novaMao);
     }
 
@@ -59,7 +67,6 @@ async function setupInicial() {
         });
     }
 }
-
 setupInicial();
 
 // --- ESCUTAR MUDANÇAS NO JOGO ---
@@ -70,17 +77,22 @@ onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     // 1. Atualiza a carta da mesa
     const cartaMesaDiv = document.getElementById('cartaMesa');
     if (dados.cartaNaMesa) {
-        cartaMesaDiv.style.background = "transparent";
-        cartaMesaDiv.style.border = "none";
-        cartaMesaDiv.style.boxShadow = "none";
+        const c = dados.cartaNaMesa;
+        const imgPath = `cartas/${c.valor}_${c.cor}.png`;
+        const imgPathAlt = `cartas/${c.cor}_${c.valor}.png`;
+
+        cartaMesaDiv.innerHTML = `<img src="${imgPath}" id="imgMesa" style="width: 120px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.7));">`;
         
-        // Ajustado para o padrão do seu print: valor_cor ou cor_valor
-        // Como no print está "draw2_red", a lógica é ${valor}_${cor}
-        cartaMesaDiv.innerHTML = `
-            <img src="cartas/${dados.cartaNaMesa.valor}_${dados.cartaNaMesa.cor}.png" 
-                 onerror="this.src='cartas/${dados.cartaNaMesa.cor}_${dados.cartaNaMesa.valor}.png'"
-                 style="width: 120px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.7));">
-        `;
+        const imgEl = document.getElementById('imgMesa');
+        imgEl.onerror = () => {
+            // Se falhar o primeiro caminho, tenta o segundo
+            if (imgEl.src.includes(imgPath)) {
+                imgEl.src = imgPathAlt;
+            } else {
+                // Se ambos falharem, desenha a carta reserva
+                cartaMesaDiv.innerHTML = criarCartaReserva(c, 120);
+            }
+        };
     }
 
     // 2. Atualiza de quem é a vez
@@ -94,76 +106,66 @@ onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     const minhasCartas = dados.jogadores[meuNick].mao || [];
 
     minhasCartas.forEach((carta, index) => {
-        const cardImg = document.createElement('img');
-        
-        // Tenta carregar valor_cor (ex: draw2_red) e se falhar tenta cor_valor (ex: red_0)
-        cardImg.src = `cartas/${carta.valor}_${carta.cor}.png`;
-        cardImg.onerror = () => {
-            cardImg.src = `cartas/${carta.cor}_${carta.valor}.png`;
-        };
-        
-        cardImg.style.width = "110px";
-        cardImg.style.cursor = "pointer";
-        cardImg.style.transition = "all 0.2s ease";
-        cardImg.style.filter = "drop-shadow(0 5px 10px rgba(0,0,0,0.5))";
-        
-        cardImg.onmouseover = () => {
-            cardImg.style.transform = "translateY(-35px) scale(1.1)";
-            cardImg.style.zIndex = "100";
-        };
-        cardImg.onmouseout = () => {
-            cardImg.style.transform = "translateY(0) scale(1)";
-            cardImg.style.zIndex = "1";
+        const container = document.createElement('div');
+        container.style.display = "inline-block";
+        container.style.margin = "5px";
+        container.style.transition = "all 0.2s ease";
+        container.style.cursor = "pointer";
+
+        const imgPath = `cartas/${carta.valor}_${carta.cor}.png`;
+        const imgPathAlt = `cartas/${carta.cor}_${carta.valor}.png`;
+
+        const img = document.createElement('img');
+        img.src = imgPath;
+        img.style.width = "110px";
+        img.style.filter = "drop-shadow(0 5px 10px rgba(0,0,0,0.5))";
+
+        img.onerror = () => {
+            if (img.src.includes(imgPath)) {
+                img.src = imgPathAlt;
+            } else {
+                container.innerHTML = criarCartaReserva(carta, 110);
+            }
         };
 
-        cardImg.onclick = () => tentarJogarCarta(carta, index, dados);
-        minhaMaoDiv.appendChild(cardImg);
+        container.onmouseover = () => { container.style.transform = "translateY(-30px) scale(1.1)"; container.style.zIndex = "100"; };
+        container.onmouseout = () => { container.style.transform = "translateY(0) scale(1)"; container.style.zIndex = "1"; };
+        container.onclick = () => tentarJogarCarta(carta, index, dados);
+
+        container.appendChild(img);
+        minhaMaoDiv.appendChild(container);
     });
 });
 
 // --- LÓGICA DE JOGAR A CARTA ---
 async function tentarJogarCarta(carta, index, dados) {
     if (dados.turno !== meuNick) return alert("Não é sua vez!");
-
     const naMesa = dados.cartaNaMesa;
 
-    // Lógica básica do Uno: cor igual ou valor igual
     if (carta.cor === naMesa.cor || carta.valor === naMesa.valor) {
         let novaMao = [...dados.jogadores[meuNick].mao];
         novaMao.splice(index, 1);
 
         const listaNomes = Object.keys(dados.jogadores);
-        let meuIndex = listaNomes.indexOf(meuNick);
-        let proximoIndex = (meuIndex + 1) % listaNomes.length;
-        let proximoTurno = listaNomes[proximoIndex];
+        let proximoTurno = listaNomes[(listaNomes.indexOf(meuNick) + 1) % listaNomes.length];
 
         const updates = {};
         updates[`salas/${salaID}/cartaNaMesa`] = carta;
         updates[`salas/${salaID}/turno`] = proximoTurno;
         updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = novaMao;
-
         await update(ref(db), updates);
     } else {
         alert("Esta carta não pode ser jogada agora!");
     }
 }
 
-// --- BOTÃO DE COMPRAR ---
 document.getElementById('btnComprar').onclick = async () => {
     const snapshot = await get(ref(db, `salas/${salaID}`));
     const dados = snapshot.val();
-    
     if (dados.turno !== meuNick) return alert("Espere sua vez!");
-
     let maoAtual = dados.jogadores[meuNick].mao || [];
     maoAtual.push(gerarCarta());
-
-    await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), {
-        mao: maoAtual
-    });
+    await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: maoAtual });
 };
 
-// --- BOTÃO SAIR ---
-document.getElementById('btnSair').onclick = () => {
-    if(confirm("Deseja sair da partida?")) window.location.href = "index.html";
-};
+document.getElementById('btnSair').onclick = () => { if(confirm("Deseja sair?")) window.location.href = "index.html"; };
