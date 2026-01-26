@@ -28,33 +28,39 @@ onValue(salaRef, (snapshot) => {
     const dados = snapshot.val();
     if (!dados) return;
 
-    // 1. Atualiza Jogadores
+    // 1. Atualiza Jogadores com visual melhorado
     const lista = document.getElementById('listaJogadores');
     lista.innerHTML = "";
     for (let j in dados.jogadores) {
-        const li = document.createElement('li');
-        li.className = "jogador-item";
-        li.innerText = "🎴 " + j;
-        lista.appendChild(li);
+        const isMestre = j === dados.dono;
+        lista.innerHTML += `
+            <li class="jogador-item">
+                <span>🎴 ${j}</span>
+                ${isMestre ? '<small style="color:#ffeb3b; font-size:0.7rem;">(MESTRE)</small>' : ''}
+            </li>`;
     }
 
-    // 2. Atualiza Regras
+    // 2. Atualiza Regras com as cores e animação
     const divRegras = document.getElementById('listaRegrasAtivas');
     divRegras.innerHTML = "";
     if (dados.regras) {
         Object.values(dados.regras).forEach(regra => {
-            divRegras.innerHTML += `<span class="regra-tag">⚠️ ${regra}</span>`;
+            divRegras.innerHTML += `<div class="regra-item">⚠️ ${regra}</div>`;
         });
     } else {
-        divRegras.innerHTML = "<small>Regras padrão ativadas</small>";
+        divRegras.innerHTML = "<p style='color:#555; font-size:0.8rem;'>Regras padrão ativadas.</p>";
     }
 
-    // 3. Interface do Dono
+    // 3. Interface do Dono (Mestre)
     if (dados.dono === meuNick) {
         document.getElementById('painelDono').style.display = "block";
         document.getElementById('btnComeçar').style.display = "block";
         document.getElementById('waitMsg').style.display = "none";
-        document.getElementById('btnAleatorio').innerText = dados.modoAleatorio ? "MODO ALEATÓRIO: ON" : "MODO ALEATÓRIO: OFF";
+        
+        // Atualiza estilo do botão aleatório
+        const btnAle = document.getElementById('btnAleatorio');
+        btnAle.innerText = dados.modoAleatorio ? "MODO ALEATÓRIO: ON" : "MODO ALEATÓRIO: OFF";
+        btnAle.className = dados.modoAleatorio ? "btn-modo btn-on" : "btn-modo btn-off";
     }
 });
 
@@ -75,7 +81,15 @@ document.getElementById('btnAleatorio').onclick = async () => {
     const isAtivo = snapshot.val() || false;
 
     if (!isAtivo) {
-        const sugestoes = ["7 roda a mão", "0 troca tudo", "Acumular +2", "Bater no 9", "Pular próximo se for carta 5"];
+        const sugestoes = [
+            "7 roda a mão", 
+            "0 troca tudo", 
+            "Acumular +2", 
+            "Bater no 9", 
+            "Pular próximo se for carta 5",
+            "Mão invisível (esconde cartas)"
+        ];
+        // Sorteia 2 regras da lista
         const sorteadas = sugestoes.sort(() => 0.5 - Math.random()).slice(0, 2);
         update(ref(db, `salas/${salaID}`), {
             modoAleatorio: true,
