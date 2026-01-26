@@ -22,6 +22,7 @@ if (!salaID || !meuNick) window.location.href = "index.html";
 document.getElementById('txtSalaID').innerText = salaID;
 
 // --- FUNÇÃO PARA GERAR UMA CARTA ALEATÓRIA ---
+// DICA: Se quiser testar apenas as cartas que você já tem, mude os arrays abaixo
 function gerarCarta() {
     const cores = ['red', 'blue', 'green', 'yellow'];
     const valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '🚫', '🔄', '+2'];
@@ -57,42 +58,60 @@ async function setupInicial() {
 
 setupInicial();
 
-// --- ESCUTAR MUDANÇAS NO JOGO ---
+// --- ESCUTAR MUDANÇAS NO JOGO (VERSÃO IMAGENS) ---
 onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     const dados = snapshot.val();
     if (!dados) return;
 
-    // 1. Atualiza a carta da mesa com visual realista
+    // 1. Atualiza a carta da mesa
     const cartaMesaDiv = document.getElementById('cartaMesa');
     if (dados.cartaNaMesa) {
-        cartaMesaDiv.className = dados.cartaNaMesa.cor;
+        // Remove estilos antigos de borda e cor
+        cartaMesaDiv.style.background = "transparent";
+        cartaMesaDiv.style.border = "none";
+        cartaMesaDiv.style.boxShadow = "none";
+        
+        // Insere a imagem da carta
         cartaMesaDiv.innerHTML = `
-            <div class="canto topo-esq">${dados.cartaNaMesa.valor}</div>
-            <span>${dados.cartaNaMesa.valor}</span>
-            <div class="canto baixo-dir">${dados.cartaNaMesa.valor}</div>
+            <img src="cartas/${dados.cartaNaMesa.cor}_${dados.cartaNaMesa.valor}.png" 
+                 style="width: 120px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.7));">
         `;
     }
 
     // 2. Atualiza de quem é a vez
-    document.getElementById('txtVez').innerText = dados.turno === meuNick ? "SUA VEZ!" : `Vez de ${dados.turno}`;
-    document.getElementById('txtVez').style.color = dados.turno === meuNick ? "#4caf50" : "#ffeb3b";
+    const txtVez = document.getElementById('txtVez');
+    txtVez.innerText = dados.turno === meuNick ? "SUA VEZ!" : `Vez de ${dados.turno}`;
+    txtVez.style.color = dados.turno === meuNick ? "#4caf50" : "#ffeb3b";
 
-    // 3. Renderiza minha mão com visual realista
+    // 3. Renderiza minha mão
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
     const minhasCartas = dados.jogadores[meuNick].mao || [];
 
     minhasCartas.forEach((carta, index) => {
-        const cardEl = document.createElement('div');
-        cardEl.className = `card ${carta.cor}`;
-        cardEl.innerHTML = `
-            <div class="canto topo-esq">${carta.valor}</div>
-            <span>${carta.valor}</span>
-            <div class="canto baixo-dir">${carta.valor}</div>
-        `;
+        const cardImg = document.createElement('img');
         
-        cardEl.onclick = () => tentarJogarCarta(carta, index, dados);
-        minhaMaoDiv.appendChild(cardEl);
+        // Padrão: cartas/red_1.png
+        cardImg.src = `cartas/${carta.cor}_${carta.valor}.png`;
+        
+        // Estilo visual das cartas na mão
+        cardImg.style.width = "110px";
+        cardImg.style.cursor = "pointer";
+        cardImg.style.transition = "all 0.2s ease";
+        cardImg.style.filter = "drop-shadow(0 5px 10px rgba(0,0,0,0.5))";
+        
+        // Efeito de hover (levantar a carta)
+        cardImg.onmouseover = () => {
+            cardImg.style.transform = "translateY(-35px) scale(1.1)";
+            cardImg.style.zIndex = "100";
+        };
+        cardImg.onmouseout = () => {
+            cardImg.style.transform = "translateY(0) scale(1)";
+            cardImg.style.zIndex = "1";
+        };
+
+        cardImg.onclick = () => tentarJogarCarta(carta, index, dados);
+        minhaMaoDiv.appendChild(cardImg);
     });
 });
 
