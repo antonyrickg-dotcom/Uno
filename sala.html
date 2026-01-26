@@ -12,6 +12,8 @@
             border-radius: 20px;
             text-align: center;
             border: 3px solid #f44336;
+            max-width: 400px;
+            margin: auto;
         }
         .codigo-sala {
             font-size: 3rem;
@@ -32,6 +34,21 @@
             padding: 10px;
             border-radius: 10px;
         }
+        .regras-box {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .regra-tag {
+            background: #444;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 2px;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
@@ -43,10 +60,23 @@
             <div id="displayCodigo" class="codigo-sala">----</div>
             
             <h3>Jogadores na Mesa:</h3>
-            <ul id="listaJogadores" class="lista-jogadores">
-                </ul>
+            <ul id="listaJogadores" class="lista-jogadores"></ul>
 
-            <button id="btnComeçar" class="btn-play" style="display: none;">COMEÇAR JOGO</button>
+            <div class="regras-box">
+                <h4 style="margin:0; color: #ffeb3b;">📜 REGRAS DA MESA</h4>
+                <div id="listaRegrasAtivas" style="margin: 10px 0;"></div>
+                
+                <div id="painelDono" style="display:none;">
+                    <hr style="border: 0.5px solid #333;">
+                    <button id="btnAleatorio" class="btn-play" style="font-size: 0.7rem; padding: 5px; background: #555;">MODO ALEATÓRIO: OFF</button>
+                    <div style="margin-top:10px; display:flex; gap:5px;">
+                        <input type="text" id="inputNovaRegra" placeholder="Nova regra..." style="flex:1; padding:5px; border-radius:5px; border:none;">
+                        <button id="btnAddRegra" style="padding:5px 10px; cursor:pointer; border-radius:5px;">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btnComeçar" class="btn-play" style="display: none; margin-top:20px;">COMEÇAR JOGO</button>
             <p id="waitMsg">Aguardando o dono iniciar...</p>
         </div>
     </div>
