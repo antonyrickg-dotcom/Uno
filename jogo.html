@@ -36,65 +36,38 @@
             gap: 60px;
         }
 
-        /* Estilo da Carta Realista */
-        .card, #cartaMesa, .baralho-compra {
+        /* AJUSTADO: Containers invisíveis para as imagens PNG brilharem */
+        .card, #cartaMesa {
             width: 110px;
             height: 165px;
-            border-radius: 12px;
-            border: 6px solid white;
             position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            overflow: hidden;
-            transition: all 0.3s ease;
             cursor: pointer;
             user-select: none;
+            /* Limpeza total do CSS antigo para usar as imagens */
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
         }
 
-        /* Elipse branca inclinada ao centro */
-        .card::before, #cartaMesa::before {
-            content: '';
-            position: absolute;
-            width: 140%;
-            height: 85%;
-            background: rgba(255, 255, 255, 0.15);
-            border: 4px solid white;
-            border-radius: 50%;
-            transform: rotate(-45deg);
-            z-index: 1;
+        /* Baralho de Compra (Verso da Carta) */
+        .baralho-compra {
+            width: 110px;
+            height: 165px;
+            border-radius: 12px;
+            border: 6px solid white;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.2s;
         }
-
-        /* Número Central */
-        .card span, #cartaMesa span {
-            font-size: 3.8rem;
-            color: white;
-            z-index: 2;
-            text-shadow: 3px 3px 5px rgba(0,0,0,0.4);
-        }
-
-        /* Números dos Cantos */
-        .canto {
-            position: absolute;
-            font-size: 1.2rem;
-            color: white;
-            z-index: 3;
-            font-family: Arial, sans-serif;
-            font-weight: bold;
-        }
-        .topo-esq { top: 8px; left: 8px; }
-        .baixo-dir { bottom: 8px; right: 8px; transform: rotate(180deg); }
-
-        /* Cores com Degradê Radial */
-        .red { background: radial-gradient(circle, #ff5555 0%, #aa0000 100%); }
-        .blue { background: radial-gradient(circle, #5555ff 0%, #0000aa 100%); }
-        .green { background: radial-gradient(circle, #55ff55 0%, #00aa00 100%); }
-        .yellow { background: radial-gradient(circle, #ffff55 0%, #aaaa00 100%); }
-        .black { background: #111; }
-
-        .baralho-compra { background: #000; border-color: #fff; }
-        .baralho-compra span { transform: rotate(-90deg); font-size: 1.5rem; }
+        .baralho-compra:hover { transform: scale(1.05); }
+        .baralho-compra span { transform: rotate(-90deg); font-size: 1.5rem; color: white; }
 
         .mao-jogador {
             background: rgba(0,0,0,0.4);
@@ -104,16 +77,17 @@
             justify-content: center;
             align-items: flex-end;
             min-height: 200px;
-            gap: 15px;
-        }
-
-        .card:hover {
-            transform: translateY(-50px) scale(1.1);
-            z-index: 100;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            gap: 10px; /* Cartas mais próximas para parecer uma mão real */
         }
 
         .btn-sair { background: #f44336; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        
+        /* Garante que a imagem preencha o container */
+        img {
+            max-width: 100%;
+            height: auto;
+            pointer-events: none; /* Deixa o clique passar para a div pai se necessário */
+        }
     </style>
 </head>
 <body>
@@ -123,9 +97,12 @@
     </div>
     <div class="mesa">
         <div class="baralho-compra" id="btnComprar"><span>UNO</span></div>
-        <div id="cartaMesa" class="black"><span>?</span></div>
+        <div id="cartaMesa">
+            <span>?</span>
+        </div>
     </div>
-    <div class="mao-jogador" id="minhaMao"></div>
+    <div class="mao-jogador" id="minhaMao">
+        </div>
     <script type="module" src="jogo.js"></script>
 </body>
 </html>
