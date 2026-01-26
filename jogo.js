@@ -22,10 +22,14 @@ if (!salaID || !meuNick) window.location.href = "index.html";
 document.getElementById('txtSalaID').innerText = salaID;
 
 // --- FUNÇÃO PARA GERAR UMA CARTA ALEATÓRIA ---
-// DICA: Se quiser testar apenas as cartas que você já tem, mude os arrays abaixo
 function gerarCarta() {
-    const cores = ['red', 'blue', 'green', 'yellow'];
-    const valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '🚫', '🔄', '+2'];
+    // Cores que você tem (conforme o print: blue e red)
+    // Se adicionar green e yellow depois, é só manter aqui
+    const cores = ['red', 'blue', 'green', 'yellow']; 
+    
+    // Nomes exatos dos arquivos que vi no seu print (draw2, reverse, skip)
+    const valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'draw2'];
+    
     return {
         cor: cores[Math.floor(Math.random() * cores.length)],
         valor: valores[Math.floor(Math.random() * valores.length)]
@@ -58,7 +62,7 @@ async function setupInicial() {
 
 setupInicial();
 
-// --- ESCUTAR MUDANÇAS NO JOGO (VERSÃO IMAGENS) ---
+// --- ESCUTAR MUDANÇAS NO JOGO ---
 onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     const dados = snapshot.val();
     if (!dados) return;
@@ -66,14 +70,15 @@ onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     // 1. Atualiza a carta da mesa
     const cartaMesaDiv = document.getElementById('cartaMesa');
     if (dados.cartaNaMesa) {
-        // Remove estilos antigos de borda e cor
         cartaMesaDiv.style.background = "transparent";
         cartaMesaDiv.style.border = "none";
         cartaMesaDiv.style.boxShadow = "none";
         
-        // Insere a imagem da carta
+        // Ajustado para o padrão do seu print: valor_cor ou cor_valor
+        // Como no print está "draw2_red", a lógica é ${valor}_${cor}
         cartaMesaDiv.innerHTML = `
-            <img src="cartas/${dados.cartaNaMesa.cor}_${dados.cartaNaMesa.valor}.png" 
+            <img src="cartas/${dados.cartaNaMesa.valor}_${dados.cartaNaMesa.cor}.png" 
+                 onerror="this.src='cartas/${dados.cartaNaMesa.cor}_${dados.cartaNaMesa.valor}.png'"
                  style="width: 120px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.7));">
         `;
     }
@@ -91,16 +96,17 @@ onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     minhasCartas.forEach((carta, index) => {
         const cardImg = document.createElement('img');
         
-        // Padrão: cartas/red_1.png
-        cardImg.src = `cartas/${carta.cor}_${carta.valor}.png`;
+        // Tenta carregar valor_cor (ex: draw2_red) e se falhar tenta cor_valor (ex: red_0)
+        cardImg.src = `cartas/${carta.valor}_${carta.cor}.png`;
+        cardImg.onerror = () => {
+            cardImg.src = `cartas/${carta.cor}_${carta.valor}.png`;
+        };
         
-        // Estilo visual das cartas na mão
         cardImg.style.width = "110px";
         cardImg.style.cursor = "pointer";
         cardImg.style.transition = "all 0.2s ease";
         cardImg.style.filter = "drop-shadow(0 5px 10px rgba(0,0,0,0.5))";
         
-        // Efeito de hover (levantar a carta)
         cardImg.onmouseover = () => {
             cardImg.style.transform = "translateY(-35px) scale(1.1)";
             cardImg.style.zIndex = "100";
@@ -121,6 +127,7 @@ async function tentarJogarCarta(carta, index, dados) {
 
     const naMesa = dados.cartaNaMesa;
 
+    // Lógica básica do Uno: cor igual ou valor igual
     if (carta.cor === naMesa.cor || carta.valor === naMesa.valor) {
         let novaMao = [...dados.jogadores[meuNick].mao];
         novaMao.splice(index, 1);
