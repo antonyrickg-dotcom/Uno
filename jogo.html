@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO! - Em Partida</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* Área do topo: Informações */
+        .topo-jogo {
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            width: 100%;
+            text-align: center;
+            border-bottom: 2px solid #444;
+        }
+
+        /* Centro: Mesa e Baralho */
+        .mesa {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 50px;
+        }
+
+        .baralho-compra {
+            width: 100px;
+            height: 150px;
+            background: #222;
+            border: 4px solid white;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #000;
+            font-weight: bold;
+        }
+
+        #cartaMesa {
+            width: 110px;
+            height: 160px;
+            border-radius: 15px;
+            border: 4px solid white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            transition: 0.3s;
+        }
+
+        /* Rodapé: Sua Mão */
+        .mao-jogador {
+            background: rgba(0,0,0,0.3);
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            min-height: 180px;
+        }
+
+        .card {
+            width: 90px;
+            height: 140px;
+            border-radius: 12px;
+            border: 3px solid white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, margin 0.2s;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-40px);
+            z-index: 10;
+        }
+
+        /* Cores das Cartas */
+        .red { background: #f44336; }
+        .blue { background: #2196f3; }
+        .green { background: #4caf50; }
+        .yellow { background: #ffeb3b; color: black; }
+        .black { background: #000; color: white; }
+
+        #btnSair {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background: #ff5252;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="topo-jogo">
+        <span>SALA: <b id="txtSalaID">---</b></span> | 
+        <span>VEZ DE: <b id="txtVez" style="color: #ffeb3b;">Aguardando...</b></span>
+        <button id="btnSair">Sair</button>
+    </div>
+
+    <div class="mesa">
+        <div class="baralho-compra" id="btnComprar">
+            <span style="transform: rotate(-90deg);">UNO</span>
+        </div>
+
+        <div id="cartaMesa" class="black">?</div>
+    </div>
+
+    <div class="mao-jogador" id="minhaMao">
+        </div>
+
+    <script type="module" src="jogo.js"></script>
+</body>
+</html>
