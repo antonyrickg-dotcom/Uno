@@ -1,163 +1,110 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyDFTRTBj7WRVn4gG9OwDCPjHP0B_NYFpCc",
-    authDomain: "unotfm.firebaseapp.com",
-    databaseURL: "https://unotfm-default-rtdb.firebaseio.com",
-    projectId: "unotfm",
-    storageBucket: "unotfm.firebasestorage.app",
-    messagingSenderId: "1035668265410",
-    appId: "1:1035668265410:web:710e61682014f9d46a1e5b"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-const salaID = localStorage.getItem('salaID');
-const meuNick = localStorage.getItem('meuNick');
-
-if (!salaID || !meuNick) window.location.href = "index.html";
-
-const TEMPO_TURNO = 20;
-let cronometroLocal = null;
-
-// --- LÓGICA DE CARTAS (Ajustada para seus arquivos) ---
-function gerarCarta() {
-    const cores = ['red', 'blue', 'green', 'yellow'];
-    let valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    const corSorteada = cores[Math.floor(Math.random() * cores.length)];
-    
-    // Especiais (conforme sua pasta)
-    if (corSorteada === 'red' || corSorteada === 'blue') {
-        valores = [...valores, 'skip', 'reverse', 'draw2'];
-    }
-    return { cor: corSorteada, valor: valores[Math.floor(Math.random() * valores.length)] };
-}
-
-function criarCartaReserva(carta, largura) {
-    const corHex = { 'red': '#ff4444', 'blue': '#4444ff', 'green': '#44aa44', 'yellow': '#ffaa00' }[carta.cor] || '#555';
-    return `<div style="width:${largura}px; height:${largura*1.4}px; background:${corHex}; border:2px solid white; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:12px; text-transform:uppercase;">${carta.valor}</div>`;
-}
-
-// --- CRONÔMETRO ---
-function iniciarCronometro(turnoAtual, dados) {
-    if (cronometroLocal) clearInterval(cronometroLocal);
-    if (!turnoAtual) return;
-    let tempo = TEMPO_TURNO;
-    cronometroLocal = setInterval(() => {
-        const el = document.getElementById(`tempo-${turnoAtual}`);
-        if (el) el.innerText = `${tempo}s`;
-        if (tempo <= 0) {
-            clearInterval(cronometroLocal);
-            if (turnoAtual === meuNick) passarVezAutomatico(dados);
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UNO Arena - Em Partida</title>
+    <style>
+        /* Estilos básicos para o container existir antes do JS carregar */
+        body {
+            background: radial-gradient(circle, #2c3e50 0%, #000000 100%);
+            color: white;
+            font-family: 'Arial Black', sans-serif;
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
-        tempo--;
-    }, 1000);
-}
 
-async function passarVezAutomatico(dados) {
-    const listaVivos = Object.keys(dados.jogadores).filter(n => !dados.jogadores[n].eliminado);
-    const proximo = listaVivos[(listaVivos.indexOf(meuNick) + 1) % listaVivos.length];
-    await update(ref(db, `salas/${salaID}`), { turno: proximo });
-}
+        #container-jogo {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
 
-// --- ATUALIZAÇÃO EM TEMPO REAL ---
-onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
-    const dados = snapshot.val();
-    if (!dados) return;
+        .topo-jogo {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #444;
+            z-index: 100;
+        }
 
-    // 1. CORREÇÃO DO TURNO UNDEFINED
-    if (!dados.turno) {
-        const primeiroNick = Object.keys(dados.jogadores)[0];
-        await update(ref(db, `salas/${salaID}`), { turno: primeiroNick });
-        return;
-    }
+        #lista-jogadores {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px;
+            flex-wrap: wrap;
+        }
 
-    document.getElementById('txtSalaID').innerText = salaID;
+        #mesa {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
 
-    // 2. Lista de Jogadores (Topo)
-    const listaJogDiv = document.getElementById('lista-jogadores');
-    listaJogDiv.innerHTML = "";
-    Object.keys(dados.jogadores).forEach(nick => {
-        const jog = dados.jogadores[nick];
-        const ativo = dados.turno === nick;
-        const div = document.createElement('div');
-        div.style.cssText = `padding:5px 10px; background:${ativo ? '#4caf50' : '#333'}; border-radius:5px; text-align:center; min-width:70px; border: 2px solid ${ativo ? 'white' : 'transparent'}`;
-        div.innerHTML = `${nick}<br><span id="tempo-${nick}" style="font-weight:bold; color:#ffeb3b">${ativo ? '20s' : ''}</span>`;
-        listaJogDiv.appendChild(div);
-    });
+        #txtVez {
+            font-size: 1.2rem;
+            color: #ffeb3b;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
 
-    iniciarCronometro(dados.turno, dados);
+        #minhaMao {
+            background: rgba(0,0,0,0.4);
+            width: 100%;
+            min-height: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-x: auto;
+        }
 
-    // 3. Carta da Mesa (Corrigindo ordem: cor_valor.png)
-    const cartaMesaDiv = document.getElementById('cartaMesa');
-    if (dados.cartaNaMesa) {
-        const c = dados.cartaNaMesa;
-        // Tenta cor_valor (ex: red_0) e se falhar tenta valor_cor (ex: 0_red)
-        cartaMesaDiv.innerHTML = `<img src="cartas/${c.cor}_${c.valor}.png" style="width:100px;" 
-            onerror="this.src='cartas/${c.valor}_${c.cor}.png'; this.onerror=()=>this.parentElement.innerHTML='${criarCartaReserva(c, 80)}'">`;
-    }
+        .btn-sair {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
 
-    // 4. Botão Comprar (jota.png)
-    const btnComp = document.getElementById('btnComprar');
-    btnComp.innerHTML = `<img src="cartas/jota.png" style="width:80px; border-radius:8px; border:2px solid white;"><br>COMPRAR`;
+    <div id="container-jogo">
+        <div class="topo-jogo">
+            <div>SALA: <b id="txtSalaID">---</b></div>
+            <button id="btnSair" class="btn-sair">SAIR</button>
+        </div>
 
-    // 5. Minha Mão
-    const minhaMaoDiv = document.getElementById('minhaMao');
-    minhaMaoDiv.innerHTML = "";
-    const cartas = dados.jogadores[meuNick].mao || [];
-    
-    cartas.forEach((c, i) => {
-        const img = document.createElement('img');
-        img.src = `cartas/${c.cor}_${c.valor}.png`;
-        img.style.width = "75px";
-        img.style.margin = "0 2px";
-        img.style.cursor = "pointer";
-        
-        img.onerror = () => {
-            const fallback = document.createElement('div');
-            fallback.innerHTML = criarCartaReserva(c, 70);
-            fallback.onclick = () => jogarCarta(c, i, dados);
-            minhaMaoDiv.appendChild(fallback);
-            img.remove();
-        };
+        <div id="lista-jogadores"></div>
 
-        img.onclick = () => jogarCarta(c, i, dados);
-        minhaMaoDiv.appendChild(img);
-    });
+        <div id="mesa">
+            <div id="btnComprar"></div>
+            
+            <div id="cartaMesa"></div>
+        </div>
 
-    const txtVez = document.getElementById('txtVez');
-    if (txtVez) {
-        txtVez.innerText = dados.turno === meuNick ? "⭐ SUA VEZ!" : `Vez de ${dados.turno}`;
-        txtVez.style.color = dados.turno === meuNick ? "#4caf50" : "white";
-    }
-});
+        <div style="text-align: center;">
+            <div id="txtVez">Carregando...</div>
+        </div>
 
-async function jogarCarta(carta, index, dados) {
-    if (dados.turno !== meuNick) return;
-    const mesa = dados.cartaNaMesa;
-    
-    if (carta.cor === mesa.cor || carta.valor === mesa.valor) {
-        let novaMao = [...dados.jogadores[meuNick].mao];
-        novaMao.splice(index, 1);
-        
-        const nicks = Object.keys(dados.jogadores).filter(n => !dados.jogadores[n].eliminado);
-        const prox = nicks[(nicks.indexOf(meuNick) + 1) % nicks.length];
+        <div id="minhaMao"></div>
+    </div>
 
-        await update(ref(db, `salas/${salaID}`), {
-            cartaNaMesa: carta,
-            turno: prox,
-            [`jogadores/${meuNick}/mao`]: novaMao
-        });
-    }
-}
-
-document.getElementById('btnComprar').onclick = async () => {
-    const snap = await get(ref(db, `salas/${salaID}`));
-    const d = snap.val();
-    if (d.turno !== meuNick) return;
-    let m = d.jogadores[meuNick].mao || [];
-    m.push(gerarCarta());
-    await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: m });
-};
+    <script type="module" src="jogo.js"></script>
+</body>
+</html>
