@@ -18,7 +18,6 @@
             touch-action: manipulation;
         }
 
-        /* Topo: Informações da Sala */
         .topo {
             background: rgba(0, 0, 0, 0.8);
             padding: 10px 20px;
@@ -39,7 +38,6 @@
             font-weight: bold;
         }
 
-        /* Centro: Mesa e Deck de Compra */
         .area-central {
             flex: 1;
             display: flex;
@@ -47,29 +45,31 @@
             justify-content: center;
             align-items: center;
             gap: 20px;
+            padding-bottom: 160px; /* Espaço para a mão não cobrir a mesa */
         }
 
         #txtVez {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
+            text-align: center;
             text-shadow: 0 0 10px rgba(0,0,0,1);
             margin-bottom: 10px;
+            min-height: 50px;
         }
 
         .mesa-display {
             display: flex;
             align-items: center;
-            gap: 40px;
+            gap: 30px;
         }
 
         #cartaMesa {
-            min-width: 120px;
-            min-height: 180px;
+            min-width: 110px;
+            min-height: 160px;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        /* Botão de Comprar estilizado como Deck */
         #btnComprar {
             background: none;
             border: none;
@@ -81,28 +81,45 @@
 
         #btnComprar:active { transform: scale(0.9); }
 
-        /* Rodapé: Minha Mão */
+        /* Rodapé: Minha Mão com Empilhamento */
         .mao-container {
-            background: rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.6);
             width: 100%;
-            padding: 20px 0;
-            min-height: 160px;
-            overflow-x: auto;
-            overflow-y: hidden;
-            white-space: nowrap;
-            display: block;
-            text-align: center;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 20px 0 40px 0;
+            min-height: 120px;
+            position: fixed;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 2px solid rgba(255,255,255,0.1);
+            z-index: 100;
         }
 
         #minhaMao {
-            display: inline-block;
-            padding: 0 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: auto;
+            padding: 0 20px;
         }
 
-        /* Scrollbar Invisível */
-        .mao-container::-webkit-scrollbar { display: none; }
+        /* Estilo das cartas empilhadas */
+        .carta-slot {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+            margin-left: -45px; /* Empilhamento lateral */
+        }
 
+        .carta-slot:first-child { margin-left: 0; }
+
+        .carta-slot:hover {
+            transform: translateY(-30px) scale(1.1);
+            z-index: 999 !important;
+        }
+
+        .mao-container::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
@@ -113,22 +130,20 @@
     </div>
 
     <div class="area-central">
-        <div id="txtVez">Aguardando...</div>
+        <div id="txtVez">Carregando partida...</div>
         
         <div class="mesa-display">
             <div id="btnComprar">
-                <img src="cartas/jota.png" style="width: 100px; border-radius: 10px; border: 3px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
-                <div style="margin-top: 5px; font-size: 12px;">COMPRAR</div>
+                <img src="cartas/jota.png" style="width: 85px; border-radius: 8px; border: 3px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                <div style="margin-top: 5px; font-size: 11px;">COMPRAR</div>
             </div>
 
-            <div id="cartaMesa">
-                </div>
+            <div id="cartaMesa"></div>
         </div>
     </div>
 
     <div class="mao-container">
-        <div id="minhaMao">
-            </div>
+        <div id="minhaMao"></div>
     </div>
 
     <script type="module" src="jogo.js"></script>
