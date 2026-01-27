@@ -22,17 +22,13 @@ if (!salaID || !meuNick) window.location.href = "index.html";
 const TEMPO_TURNO = 20;
 let cronometroLocal = null;
 
-// --- LÓGICA DE CARTAS (Ajustada para seus arquivos) ---
 function gerarCarta() {
     const cores = ['red', 'blue', 'green', 'yellow'];
-    let valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    const corSorteada = cores[Math.floor(Math.random() * cores.length)];
-    
-    // Especiais (conforme sua pasta)
-    if (corSorteada === 'red' || corSorteada === 'blue') {
-        valores = [...valores, 'skip', 'reverse', 'draw2'];
-    }
-    return { cor: corSorteada, valor: valores[Math.floor(Math.random() * valores.length)] };
+    const valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    return { 
+        cor: cores[Math.floor(Math.random() * cores.length)], 
+        valor: valores[Math.floor(Math.random() * valores.length)] 
+    };
 }
 
 function criarCartaReserva(carta, largura) {
@@ -40,7 +36,6 @@ function criarCartaReserva(carta, largura) {
     return `<div style="width:${largura}px; height:${largura*1.4}px; background:${corHex}; border:2px solid white; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:12px; text-transform:uppercase;">${carta.valor}</div>`;
 }
 
-// --- CRONÔMETRO ---
 function iniciarCronometro(turnoAtual, dados) {
     if (cronometroLocal) clearInterval(cronometroLocal);
     if (!turnoAtual) return;
@@ -57,26 +52,34 @@ function iniciarCronometro(turnoAtual, dados) {
 }
 
 async function passarVezAutomatico(dados) {
-    const listaVivos = Object.keys(dados.jogadores).filter(n => !dados.jogadores[n].eliminado);
-    const proximo = listaVivos[(listaVivos.indexOf(meuNick) + 1) % listaVivos.length];
-    await update(ref(db, `salas/${salaID}`), { turno: proximo });
+    const nicks = Object.keys(dados.jogadores).filter(n => !dados.jogadores[n].eliminado);
+    const prox = nicks[(nicks.indexOf(meuNick) + 1) % nicks.length];
+    await update(ref(db, `salas/${salaID}`), { turno: prox });
 }
 
-// --- ATUALIZAÇÃO EM TEMPO REAL ---
 onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     const dados = snapshot.val();
     if (!dados) return;
 
-    // 1. CORREÇÃO DO TURNO UNDEFINED
+    // --- 1. INICIALIZAÇÃO DA MESA (Se estiver vazia) ---
+    if (!dados.cartaNaMesa) {
+        const donoDaSala = Object.keys(dados.jogadores)[0];
+        if (meuNick === donoDaSala) {
+            await update(ref(db, `salas/${salaID}`), { cartaNaMesa: gerarCarta() });
+        }
+        return;
+    }
+
+    // --- 2. INICIALIZAÇÃO DO TURNO ---
     if (!dados.turno) {
-        const primeiroNick = Object.keys(dados.jogadores)[0];
-        await update(ref(db, `salas/${salaID}`), { turno: primeiroNick });
+        const primeiro = Object.keys(dados.jogadores)[0];
+        await update(ref(db, `salas/${salaID}`), { turno: primeiro });
         return;
     }
 
     document.getElementById('txtSalaID').innerText = salaID;
 
-    // 2. Lista de Jogadores (Topo)
+    // --- 3. LISTA DE JOGADORES ---
     const listaJogDiv = document.getElementById('lista-jogadores');
     listaJogDiv.innerHTML = "";
     Object.keys(dados.jogadores).forEach(nick => {
@@ -84,46 +87,39 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
         const ativo = dados.turno === nick;
         const div = document.createElement('div');
         div.style.cssText = `padding:5px 10px; background:${ativo ? '#4caf50' : '#333'}; border-radius:5px; text-align:center; min-width:70px; border: 2px solid ${ativo ? 'white' : 'transparent'}`;
-        div.innerHTML = `${nick}<br><span id="tempo-${nick}" style="font-weight:bold; color:#ffeb3b">${ativo ? '20s' : ''}</span>`;
+        div.innerHTML = `${nick} (${jog.mao ? jog.mao.length : 0})<br><span id="tempo-${nick}" style="font-weight:bold; color:#ffeb3b">${ativo ? '20s' : ''}</span>`;
         listaJogDiv.appendChild(div);
     });
 
     iniciarCronometro(dados.turno, dados);
 
-    // 3. Carta da Mesa (Corrigindo ordem: cor_valor.png)
+    // --- 4. CARTA DA MESA ---
     const cartaMesaDiv = document.getElementById('cartaMesa');
-    if (dados.cartaNaMesa) {
-        const c = dados.cartaNaMesa;
-        // Tenta cor_valor (ex: red_0) e se falhar tenta valor_cor (ex: 0_red)
-        cartaMesaDiv.innerHTML = `<img src="cartas/${c.cor}_${c.valor}.png" style="width:100px;" 
-            onerror="this.src='cartas/${c.valor}_${c.cor}.png'; this.onerror=()=>this.parentElement.innerHTML='${criarCartaReserva(c, 80)}'">`;
-    }
+    const cM = dados.cartaNaMesa;
+    cartaMesaDiv.innerHTML = `<img src="cartas/${cM.cor}_${cM.valor}.png" style="width:100px;" 
+        onerror="this.src='cartas/${cM.valor}_${cM.cor}.png'; this.onerror=()=>this.parentElement.innerHTML='${criarCartaReserva(cM, 80)}'">`;
 
-    // 4. Botão Comprar (jota.png)
-    const btnComp = document.getElementById('btnComprar');
-    btnComp.innerHTML = `<img src="cartas/jota.png" style="width:80px; border-radius:8px; border:2px solid white;"><br>COMPRAR`;
-
-    // 5. Minha Mão
+    // --- 5. MINHA MÃO (PRIVADO) ---
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
-    const cartas = dados.jogadores[meuNick].mao || [];
     
-    cartas.forEach((c, i) => {
+    // Pegamos apenas a mão do usuário logado neste navegador
+    const minhasCartas = dados.jogadores[meuNick].mao || [];
+    
+    minhasCartas.forEach((c, i) => {
         const img = document.createElement('img');
         img.src = `cartas/${c.cor}_${c.valor}.png`;
         img.style.width = "75px";
         img.style.margin = "0 2px";
         img.style.cursor = "pointer";
-        
+        img.onclick = () => jogarCarta(c, i, dados);
         img.onerror = () => {
-            const fallback = document.createElement('div');
-            fallback.innerHTML = criarCartaReserva(c, 70);
-            fallback.onclick = () => jogarCarta(c, i, dados);
-            minhaMaoDiv.appendChild(fallback);
+            const div = document.createElement('div');
+            div.innerHTML = criarCartaReserva(c, 70);
+            div.onclick = () => jogarCarta(c, i, dados);
+            minhaMaoDiv.appendChild(div);
             img.remove();
         };
-
-        img.onclick = () => jogarCarta(c, i, dados);
         minhaMaoDiv.appendChild(img);
     });
 
@@ -161,3 +157,5 @@ document.getElementById('btnComprar').onclick = async () => {
     m.push(gerarCarta());
     await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: m });
 };
+
+document.getElementById('btnSair').onclick = () => { if(confirm("Sair?")) window.location.href = "index.html"; };
