@@ -23,19 +23,19 @@ if (!salaID || !meuNick) window.location.href = "index.html";
 const TEMPO_TURNO = 20;
 let cronometroLocal = null;
 
-// --- ESTILOS DINÂMICOS (CORRIGIDOS PARA CELULAR) ---
+// --- CSS DINÂMICO ---
 const style = document.createElement('style');
 style.innerHTML = `
     body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: sans-serif; color: white; }
     #container-jogo { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
     
     #lista-jogadores { display: flex; justify-content: center; gap: 8px; padding: 10px; background: rgba(0,0,0,0.5); flex-wrap: wrap; }
-    .card-jogador { padding: 5px 8px; border-radius: 6px; background: #333; min-width: 70px; text-align: center; border: 2px solid transparent; transition: 0.3s; font-size: 12px; }
+    .card-jogador { padding: 5px 10px; border-radius: 6px; background: #333; min-width: 80px; text-align: center; border: 2px solid transparent; transition: 0.3s; font-size: 12px; }
     .jogador-ativo { border-color: #4caf50; box-shadow: 0 0 10px #4caf50; transform: scale(1.05); }
-    .tempo-texto { font-weight: bold; color: #ffeb3b; display: block; font-size: 14px; }
+    .tempo-texto { font-weight: bold; color: #ffeb3b; display: block; font-size: 14px; margin-top: 2px; }
     .status-eliminado { text-decoration: line-through; opacity: 0.5; color: #ff5555 !important; }
 
-    #mesa { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; gap: 20px; }
+    #mesa { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; gap: 15px; }
     #cartaMesa img { width: 100px; filter: drop-shadow(0 0 15px rgba(0,0,0,0.8)); transition: 0.3s; }
 
     #minhaMao { 
@@ -46,9 +46,8 @@ style.innerHTML = `
     }
     .carta-container { transition: transform 0.2s; cursor: pointer; display: inline-block; }
     
-    #btnComprar { background: none; border: none; color: white; cursor: pointer; font-family: inherit; font-weight: bold; }
-    #btnComprar img { transition: transform 0.2s; }
-    #btnComprar:active img { transform: scale(0.9); }
+    #btnComprar { background: none; border: none; color: white; cursor: pointer; text-align: center; font-size: 12px; }
+    #btnComprar img { border: 2px solid white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
 
     @media (max-width: 600px) {
         #minhaMao { min-height: 110px; padding: 10px 5px; }
@@ -59,13 +58,11 @@ document.head.appendChild(style);
 
 // --- LÓGICA DE CARTAS ---
 function gerarCarta() {
-    // Red e Blue com especiais, Green e Yellow apenas números (conforme seu progresso)
     const cores = ['red', 'blue', 'green', 'yellow'];
     let valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    
     const corSorteada = cores[Math.floor(Math.random() * cores.length)];
     
-    // Só adiciona especiais se for Vermelho (conforme sua instrução)
+    // Conforme sua regra: especiais apenas em cartas vermelhas (red)
     if (corSorteada === 'red') {
         valores = [...valores, 'skip', 'reverse', 'draw2'];
     }
@@ -80,7 +77,7 @@ function criarCartaReserva(carta, largura) {
     return `<div style="width: ${largura}px; height: ${largura * 1.5}px; background: ${corHex}; border: 2px solid white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: ${largura/2.5}px;">${label}</div>`;
 }
 
-// --- LÓGICA DE TURNO E TEMPO ---
+// --- CRONÔMETRO E ELIMINAÇÃO ---
 async function iniciarCronometro(turnoAtual, dados) {
     if (cronometroLocal) clearInterval(cronometroLocal);
     let tempoRestante = TEMPO_TURNO;
@@ -100,10 +97,10 @@ async function iniciarCronometro(turnoAtual, dados) {
 async function passarVezAutomatico(dados) {
     const jogador = dados.jogadores[meuNick];
     const pulos = (jogador.pulos || 0) + 1;
-
     const updates = {};
+
     if (pulos >= 3) {
-        alert("Você foi eliminado por inatividade!");
+        alert("Eliminado por inatividade!");
         updates[`salas/${salaID}/jogadores/${meuNick}/eliminado`] = true;
         updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = [];
     } else {
@@ -117,12 +114,12 @@ async function passarVezAutomatico(dados) {
     await update(ref(db), updates);
 }
 
-// --- RENDERIZAÇÃO E FIREBASE ---
+// --- ATUALIZAÇÃO EM TEMPO REAL ---
 onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     const dados = snapshot.val();
     if (!dados) return;
 
-    // 1. Lista de Jogadores
+    // 1. Jogadores
     const listaJogDiv = document.getElementById('lista-jogadores');
     listaJogDiv.innerHTML = "";
     Object.keys(dados.jogadores).forEach(nick => {
@@ -148,20 +145,18 @@ onValue(ref(db, `salas/${salaID}`), (snapshot) => {
             onerror="this.src='cartas/${c.cor}_${c.valor}.png'; this.onerror=function(){this.parentElement.innerHTML='${criarCartaReserva(c, 90)}'}">`;
     }
 
-    // 3. Minha Mão (Dinâmica)
+    // 3. Minha Mão (Escalonamento Dinâmico)
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
     const minhasCartas = dados.jogadores[meuNick].mao || [];
     
-    // Cálculo de largura para caber no celular
     let larguraCarta = 90;
-    const larguraTela = window.innerWidth;
-    if ((minhasCartas.length * larguraCarta) > larguraTela) {
-        larguraCarta = Math.max(45, (larguraTela - 40) / minhasCartas.length);
+    const larguraDisponivel = window.innerWidth - 40;
+    if ((minhasCartas.length * larguraCarta) > larguraDisponivel) {
+        larguraCarta = Math.max(40, larguraDisponivel / minhasCartas.length);
     }
     
-    // Sobreposição (Overlap) se houver muitas cartas
-    const overlap = minhasCartas.length > 8 ? -(larguraCarta * 0.2) : 4;
+    const overlap = minhasCartas.length > 7 ? -(larguraCarta * 0.25) : 5;
 
     minhasCartas.forEach((carta, index) => {
         const container = document.createElement('div');
@@ -171,19 +166,16 @@ onValue(ref(db, `salas/${salaID}`), (snapshot) => {
         const img = document.createElement('img');
         img.src = `cartas/${carta.valor}_${carta.cor}.png`;
         img.style.width = `${larguraCarta}px`;
-        img.onerror = () => { container.innerHTML = criarCartaReserva(carta, larguraCarta); };
+        img.onerror = () => { img.src = `cartas/${carta.cor}_${carta.valor}.png`; img.onerror = () => { container.innerHTML = criarCartaReserva(carta, larguraCarta); }};
 
         container.onclick = () => tentarJogarCarta(carta, index, dados);
-        
-        // Efeito de toque/hover
-        container.onmouseenter = () => { container.style.transform = "translateY(-20px)"; container.style.zIndex = "100"; };
+        container.onmouseenter = () => { container.style.transform = "translateY(-25px)"; container.style.zIndex = "100"; };
         container.onmouseleave = () => { container.style.transform = "translateY(0)"; container.style.zIndex = "1"; };
 
         container.appendChild(img);
         minhaMaoDiv.appendChild(container);
     });
 
-    // Atualizar texto da vez
     const txtVez = document.getElementById('txtVez');
     if (txtVez) txtVez.innerText = dados.turno === meuNick ? "SUA VEZ!" : `Vez de ${dados.turno}`;
 });
@@ -212,10 +204,10 @@ async function tentarJogarCarta(carta, index, dados) {
 // BOTÃO COMPRAR (jota.png)
 const btnComprar = document.getElementById('btnComprar');
 if (btnComprar) {
-    btnComprar.innerHTML = `<img src="cartas/jota.png" style="width: 70px; display: block; margin: auto; border: 2px solid white; border-radius: 5px;"> <span>COMPRAR</span>`;
+    btnComprar.innerHTML = `<img src="cartas/jota.png" style="width: 75px; display: block; margin: 0 auto 5px;"><b style="color:#ffeb3b">COMPRAR</b>`;
     btnComprar.onclick = async () => {
-        const snapshot = await get(ref(db, `salas/${salaID}`));
-        const dados = snapshot.val();
+        const snap = await get(ref(db, `salas/${salaID}`));
+        const dados = snap.val();
         if (dados.turno !== meuNick || dados.jogadores[meuNick].eliminado) return;
         
         let maoAtual = dados.jogadores[meuNick].mao || [];
@@ -224,4 +216,4 @@ if (btnComprar) {
     };
 }
 
-document.getElementById('btnSair').onclick = () => { if(confirm("Deseja sair da partida?")) window.location.href = "index.html"; };
+document.getElementById('btnSair').onclick = () => { if(confirm("Sair da partida?")) window.location.href = "index.html"; };
