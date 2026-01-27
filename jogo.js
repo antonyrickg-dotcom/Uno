@@ -19,201 +19,139 @@ const meuNick = localStorage.getItem('meuNick');
 
 if (!salaID || !meuNick) window.location.href = "index.html";
 
-// CONFIGURAÇÕES DO JOGO
 const TEMPO_TURNO = 20;
 let cronometroLocal = null;
 
-// --- CSS DINÂMICO ---
-const style = document.createElement('style');
-style.innerHTML = `
-    body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: sans-serif; color: white; }
-    #container-jogo { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
-    
-    #lista-jogadores { display: flex; justify-content: center; gap: 8px; padding: 10px; background: rgba(0,0,0,0.5); flex-wrap: wrap; }
-    .card-jogador { padding: 5px 10px; border-radius: 6px; background: #333; min-width: 80px; text-align: center; border: 2px solid transparent; transition: 0.3s; font-size: 12px; }
-    .jogador-ativo { border-color: #4caf50; box-shadow: 0 0 10px #4caf50; transform: scale(1.05); }
-    .tempo-texto { font-weight: bold; color: #ffeb3b; display: block; font-size: 14px; margin-top: 2px; }
-    .status-eliminado { text-decoration: line-through; opacity: 0.5; color: #ff5555 !important; }
-
-    #mesa { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; gap: 15px; }
-    #cartaMesa img { width: 100px; filter: drop-shadow(0 0 15px rgba(0,0,0,0.8)); transition: 0.3s; }
-
-    #minhaMao { 
-        display: flex; justify-content: center; align-items: flex-end; 
-        padding: 20px 10px; min-height: 140px; width: 100%; box-sizing: border-box;
-        overflow-x: auto; overflow-y: hidden; white-space: nowrap;
-        background: rgba(0,0,0,0.2);
-    }
-    .carta-container { transition: transform 0.2s; cursor: pointer; display: inline-block; }
-    
-    #btnComprar { background: none; border: none; color: white; cursor: pointer; text-align: center; font-size: 12px; }
-    #btnComprar img { border: 2px solid white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
-
-    @media (max-width: 600px) {
-        #minhaMao { min-height: 110px; padding: 10px 5px; }
-        #cartaMesa img { width: 85px; }
-    }
-`;
-document.head.appendChild(style);
-
-// --- LÓGICA DE CARTAS ---
+// --- FUNÇÃO PARA GERAR UMA CARTA ---
 function gerarCarta() {
     const cores = ['red', 'blue', 'green', 'yellow'];
     let valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    const corSorteada = cores[Math.floor(Math.random() * cores.length)];
-    
-    // Conforme sua regra: especiais apenas em cartas vermelhas (red)
-    if (corSorteada === 'red') {
-        valores = [...valores, 'skip', 'reverse', 'draw2'];
-    }
-
-    return { cor: corSorteada, valor: valores[Math.floor(Math.random() * valores.length)] };
+    const cor = cores[Math.floor(Math.random() * cores.length)];
+    if (cor === 'red') valores = [...valores, 'skip', 'reverse', 'draw2'];
+    return { cor, valor: valores[Math.floor(Math.random() * valores.length)] };
 }
 
+// --- DESENHAR CARTA CASO A IMAGEM FALHE ---
 function criarCartaReserva(carta, largura) {
-    const nomesEspeciais = { 'skip': '🚫', 'reverse': '🔄', 'draw2': '+2' };
-    const label = nomesEspeciais[carta.valor] || carta.valor;
     const corHex = { 'red': '#ff4444', 'blue': '#4444ff', 'green': '#44aa44', 'yellow': '#ffaa00' }[carta.cor];
-    return `<div style="width: ${largura}px; height: ${largura * 1.5}px; background: ${corHex}; border: 2px solid white; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: ${largura/2.5}px;">${label}</div>`;
+    return `<div style="width: ${largura}px; height: ${largura * 1.4}px; background: ${corHex}; border: 2px solid white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">${carta.valor}</div>`;
 }
 
-// --- CRONÔMETRO E ELIMINAÇÃO ---
-async function iniciarCronometro(turnoAtual, dados) {
+// --- CRONÔMETRO ---
+function iniciarCronometro(turnoAtual, dados) {
     if (cronometroLocal) clearInterval(cronometroLocal);
-    let tempoRestante = TEMPO_TURNO;
-    
-    cronometroLocal = setInterval(async () => {
-        const elTempo = document.getElementById(`tempo-${turnoAtual}`);
-        if (elTempo) elTempo.innerText = `${tempoRestante}s`;
-
-        if (tempoRestante <= 0) {
+    let tempo = TEMPO_TURNO;
+    cronometroLocal = setInterval(() => {
+        const el = document.getElementById(`tempo-${turnoAtual}`);
+        if (el) el.innerText = `${tempo}s`;
+        if (tempo <= 0) {
             clearInterval(cronometroLocal);
-            if (turnoAtual === meuNick) passarVezAutomatico(dados);
+            if (turnoAtual === meuNick) passarVez(dados);
         }
-        tempoRestante--;
+        tempo--;
     }, 1000);
 }
 
-async function passarVezAutomatico(dados) {
-    const jogador = dados.jogadores[meuNick];
-    const pulos = (jogador.pulos || 0) + 1;
-    const updates = {};
-
-    if (pulos >= 3) {
-        alert("Eliminado por inatividade!");
-        updates[`salas/${salaID}/jogadores/${meuNick}/eliminado`] = true;
-        updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = [];
-    } else {
-        updates[`salas/${salaID}/jogadores/${meuNick}/pulos`] = pulos;
-    }
-    
-    const listaVivos = Object.keys(dados.jogadores).filter(n => !dados.jogadores[n].eliminado);
-    let proximoTurno = listaVivos[(listaVivos.indexOf(meuNick) + 1) % listaVivos.length];
-    
-    updates[`salas/${salaID}/turno`] = proximoTurno;
-    await update(ref(db), updates);
+async function passarVez(dados) {
+    const vivos = Object.keys(dados.jogadores).filter(n => !dados.jogadores[n].eliminado);
+    const proximo = vivos[(vivos.indexOf(meuNick) + 1) % vivos.length];
+    await update(ref(db, `salas/${salaID}`), { turno: proximo });
 }
 
-// --- ATUALIZAÇÃO EM TEMPO REAL ---
+// --- ATUALIZAÇÃO DO JOGO ---
 onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     const dados = snapshot.val();
     if (!dados) return;
 
-    // 1. Jogadores
+    document.getElementById('txtSalaID').innerText = salaID;
+
+    // 1. Lista de Jogadores (Topo)
     const listaJogDiv = document.getElementById('lista-jogadores');
     listaJogDiv.innerHTML = "";
     Object.keys(dados.jogadores).forEach(nick => {
         const jog = dados.jogadores[nick];
         const ativo = dados.turno === nick;
         const div = document.createElement('div');
-        div.className = `card-jogador ${ativo ? 'jogador-ativo' : ''}`;
-        div.innerHTML = `
-            <span class="${jog.eliminado ? 'status-eliminado' : ''}">${nick} (${jog.mao ? jog.mao.length : 0})</span>
-            <span class="tempo-texto" id="tempo-${nick}">${ativo ? '20s' : ''}</span>
-            <div style="font-size: 9px; opacity: 0.7">Faltas: ${jog.pulos || 0}/3</div>
-        `;
+        div.style.cssText = `padding: 5px 10px; background: ${ativo ? '#4caf50' : '#333'}; border-radius: 5px; font-size: 12px; text-align: center;`;
+        div.innerHTML = `${nick}<br><span id="tempo-${nick}" style="font-weight:bold; color:#ffeb3b"></span>`;
         listaJogDiv.appendChild(div);
     });
 
     iniciarCronometro(dados.turno, dados);
 
-    // 2. Mesa
+    // 2. Carta da Mesa (Centro) - Tentando os dois formatos de nome
     const cartaMesaDiv = document.getElementById('cartaMesa');
     if (dados.cartaNaMesa) {
         const c = dados.cartaNaMesa;
-        cartaMesaDiv.innerHTML = `<img src="cartas/${c.valor}_${c.cor}.png" 
-            onerror="this.src='cartas/${c.cor}_${c.valor}.png'; this.onerror=function(){this.parentElement.innerHTML='${criarCartaReserva(c, 90)}'}">`;
+        cartaMesaDiv.innerHTML = `<img src="cartas/${c.cor}_${c.valor}.png" style="width: 100px;" 
+            onerror="this.src='cartas/${c.valor}_${c.cor}.png'; this.onerror=()=>this.parentElement.innerHTML='${criarCartaReserva(c, 80)}'">`;
     }
 
-    // 3. Minha Mão (Escalonamento Dinâmico)
+    // 3. Botão Comprar (jota.png)
+    const btnComp = document.getElementById('btnComprar');
+    btnComp.innerHTML = `<img src="cartas/jota.png" style="width: 80px; border-radius: 8px; border: 2px solid white;"><br>COMPRAR`;
+
+    // 4. Minha Mão (Rodapé)
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
-    const minhasCartas = dados.jogadores[meuNick].mao || [];
+    const cartas = dados.jogadores[meuNick].mao || [];
     
-    let larguraCarta = 90;
-    const larguraDisponivel = window.innerWidth - 40;
-    if ((minhasCartas.length * larguraCarta) > larguraDisponivel) {
-        larguraCarta = Math.max(40, larguraDisponivel / minhasCartas.length);
-    }
-    
-    const overlap = minhasCartas.length > 7 ? -(larguraCarta * 0.25) : 5;
+    // Ajuste dinâmico de largura para caber no celular
+    let largura = 80;
+    if (cartas.length > 6) largura = Math.max(40, (window.innerWidth - 60) / cartas.length);
 
-    minhasCartas.forEach((carta, index) => {
-        const container = document.createElement('div');
-        container.className = "carta-container";
-        container.style.marginLeft = index === 0 ? "0" : `${overlap}px`;
-
+    cartas.forEach((c, i) => {
         const img = document.createElement('img');
-        img.src = `cartas/${carta.valor}_${carta.cor}.png`;
-        img.style.width = `${larguraCarta}px`;
-        img.onerror = () => { img.src = `cartas/${carta.cor}_${carta.valor}.png`; img.onerror = () => { container.innerHTML = criarCartaReserva(carta, larguraCarta); }};
+        img.src = `cartas/${c.cor}_${c.valor}.png`;
+        img.style.width = `${largura}px`;
+        img.style.marginLeft = i === 0 ? "0" : `-${largura/3}px`;
+        img.style.cursor = "pointer";
+        img.style.transition = "0.2s";
+        
+        img.onerror = () => { 
+            const fallback = document.createElement('div');
+            fallback.innerHTML = criarCartaReserva(c, largura);
+            fallback.onclick = () => jogarCarta(c, i, dados);
+            minhaMaoDiv.appendChild(fallback);
+            img.remove();
+        };
 
-        container.onclick = () => tentarJogarCarta(carta, index, dados);
-        container.onmouseenter = () => { container.style.transform = "translateY(-25px)"; container.style.zIndex = "100"; };
-        container.onmouseleave = () => { container.style.transform = "translateY(0)"; container.style.zIndex = "1"; };
-
-        container.appendChild(img);
-        minhaMaoDiv.appendChild(container);
+        img.onclick = () => jogarCarta(c, i, dados);
+        img.onmouseenter = () => img.style.transform = "translateY(-20px)";
+        img.onmouseleave = () => img.style.transform = "translateY(0)";
+        
+        minhaMaoDiv.appendChild(img);
     });
 
-    const txtVez = document.getElementById('txtVez');
-    if (txtVez) txtVez.innerText = dados.turno === meuNick ? "SUA VEZ!" : `Vez de ${dados.turno}`;
+    document.getElementById('txtVez').innerText = dados.turno === meuNick ? "SUA VEZ!" : `Vez de ${dados.turno}`;
 });
 
-async function tentarJogarCarta(carta, index, dados) {
-    if (dados.turno !== meuNick || dados.jogadores[meuNick].eliminado) return;
-    const naMesa = dados.cartaNaMesa;
-
-    if (carta.cor === naMesa.cor || carta.valor === naMesa.valor) {
+async function jogarCarta(carta, index, dados) {
+    if (dados.turno !== meuNick) return;
+    const mesa = dados.cartaNaMesa;
+    
+    if (carta.cor === mesa.cor || carta.valor === mesa.valor) {
         let novaMao = [...dados.jogadores[meuNick].mao];
         novaMao.splice(index, 1);
+        
+        const vivos = Object.keys(dados.jogadores).filter(n => !dados.jogadores[n].eliminado);
+        const proximo = vivos[(vivos.indexOf(meuNick) + 1) % vivos.length];
 
-        const listaVivos = Object.keys(dados.jogadores).filter(n => !dados.jogadores[n].eliminado);
-        let proximoTurno = listaVivos[(listaVivos.indexOf(meuNick) + 1) % listaVivos.length];
-
-        const updates = {};
-        updates[`salas/${salaID}/cartaNaMesa`] = carta;
-        updates[`salas/${salaID}/turno`] = proximoTurno;
-        updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = novaMao;
-        updates[`salas/${salaID}/jogadores/${meuNick}/pulos`] = 0;
-
-        await update(ref(db), updates);
+        await update(ref(db, `salas/${salaID}`), {
+            cartaNaMesa: carta,
+            turno: proximo,
+            [`jogadores/${meuNick}/mao`]: novaMao
+        });
     }
 }
 
-// BOTÃO COMPRAR (jota.png)
-const btnComprar = document.getElementById('btnComprar');
-if (btnComprar) {
-    btnComprar.innerHTML = `<img src="cartas/jota.png" style="width: 75px; display: block; margin: 0 auto 5px;"><b style="color:#ffeb3b">COMPRAR</b>`;
-    btnComprar.onclick = async () => {
-        const snap = await get(ref(db, `salas/${salaID}`));
-        const dados = snap.val();
-        if (dados.turno !== meuNick || dados.jogadores[meuNick].eliminado) return;
-        
-        let maoAtual = dados.jogadores[meuNick].mao || [];
-        maoAtual.push(gerarCarta());
-        await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: maoAtual, pulos: 0 });
-    };
-}
+document.getElementById('btnComprar').onclick = async () => {
+    const snap = await get(ref(db, `salas/${salaID}`));
+    const d = snap.val();
+    if (d.turno !== meuNick) return;
+    let m = d.jogadores[meuNick].mao || [];
+    m.push(gerarCarta());
+    await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: m });
+};
 
-document.getElementById('btnSair').onclick = () => { if(confirm("Sair da partida?")) window.location.href = "index.html"; };
+document.getElementById('btnSair').onclick = () => { if(confirm("Sair?")) window.location.href = "index.html"; };
