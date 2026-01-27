@@ -19,117 +19,141 @@ const meuNick = localStorage.getItem('meuNick');
 
 if (!salaID || !meuNick) window.location.href = "index.html";
 
-document.getElementById('txtSalaID').innerText = salaID;
+// CONFIGURAÇÕES DO JOGO
+const TEMPO_TURNO = 20;
+let cronometroLocal = null;
 
-// --- FUNÇÃO PARA GERAR UMA CARTA ALEATÓRIA ---
+// --- INJETAR CSS PARA CELULAR E LAYOUT ---
+const style = document.createElement('style');
+style.innerHTML = `
+    body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: sans-serif; }
+    #container-jogo { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
+    
+    #lista-jogadores { display: flex; justify-content: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.3); }
+    .card-jogador { padding: 5px 10px; border-radius: 5px; background: #333; color: white; text-align: center; border: 2px solid transparent; transition: 0.3s; }
+    .jogador-ativo { border-color: #4caf50; box-shadow: 0 0 10px #4caf50; transform: scale(1.1); }
+    .tempo-texto { font-weight: bold; font-size: 12px; color: #ffeb3b; display: block; }
+    .status-eliminado { text-decoration: line-through; color: #ff5555 !important; }
+
+    #mesa { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+    #cartaMesa { transition: 0.3s; }
+
+    #minhaMao { 
+        display: flex; justify-content: center; align-items: flex-end; 
+        padding: 10px; height: 160px; width: 100%; box-sizing: border-box;
+        overflow-x: auto; overflow-y: hidden; white-space: nowrap;
+    }
+    .carta-container { transition: transform 0.2s; position: relative; }
+    
+    @media (max-width: 600px) {
+        #minhaMao { height: 120px; padding: 5px; }
+        .card-jogador { font-size: 10px; }
+    }
+`;
+document.head.appendChild(style);
+
 function gerarCarta() {
     const cores = ['red', 'blue', 'green', 'yellow'];
     const valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'draw2'];
-    return {
-        cor: cores[Math.floor(Math.random() * cores.length)],
-        valor: valores[Math.floor(Math.random() * valores.length)]
-    };
+    return { cor: cores[Math.floor(Math.random() * cores.length)], valor: valores[Math.floor(Math.random() * valores.length)] };
 }
 
-// --- FUNÇÃO PARA DESENHAR CARTA CASO A IMAGEM NÃO EXISTA ---
 function criarCartaReserva(carta, tamanho) {
     const nomesEspeciais = { 'skip': '🚫', 'reverse': '🔄', 'draw2': '+2' };
     const label = nomesEspeciais[carta.valor] || carta.valor;
     const corHex = { 'red': '#ff5555', 'blue': '#5555ff', 'green': '#55aa55', 'yellow': '#ffaa00' }[carta.cor];
-
-    return `
-        <div style="width: ${tamanho}px; height: ${tamanho * 1.5}px; 
-                    background: ${corHex}; border: 4px solid white; 
-                    border-radius: 10px; display: flex; align-items: center; 
-                    justify-content: center; color: white; font-family: Arial; 
-                    font-weight: bold; font-size: 30px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);">
-            ${label}
-        </div>`;
+    return `<div style="width: ${tamanho}px; height: ${tamanho * 1.5}px; background: ${corHex}; border: 3px solid white; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: ${tamanho/3}px;">${label}</div>`;
 }
 
-// --- INICIALIZAÇÃO DA PARTIDA ---
-async function setupInicial() {
-    const salaRef = ref(db, `salas/${salaID}`);
-    const snapshot = await get(salaRef);
-    const dados = snapshot.val();
-    if (!dados) return;
+// --- LOGICA DO CRONÔMETRO ---
+async function iniciarCronometro(turnoAtual, dados) {
+    if (cronometroLocal) clearInterval(cronometroLocal);
+    let tempoRestante = TEMPO_TURNO;
+    
+    cronometroLocal = setInterval(async () => {
+        const elTempo = document.getElementById(`tempo-${turnoAtual}`);
+        if (elTempo) elTempo.innerText = `${tempoRestante}s`;
 
-    if (!dados.jogadores[meuNick].mao) {
-        let novaMao = [];
-        for (let i = 0; i < 7; i++) novaMao.push(gerarCarta());
-        await set(ref(db, `salas/${salaID}/jogadores/${meuNick}/mao`), novaMao);
-    }
-
-    if (dados.dono === meuNick && !dados.cartaNaMesa) {
-        await update(ref(db, `salas/${salaID}`), {
-            cartaNaMesa: gerarCarta(),
-            turno: dados.dono
-        });
-    }
+        if (tempoRestante <= 0) {
+            clearInterval(cronometroLocal);
+            if (turnoAtual === meuNick) {
+                passarVezAutomatico(dados);
+            }
+        }
+        tempoRestante--;
+    }, 1000);
 }
-setupInicial();
 
-// --- ESCUTAR MUDANÇAS NO JOGO ---
+async function passarVezAutomatico(dados) {
+    const jogador = dados.jogadores[meuNick];
+    const pulos = (jogador.pulos || 0) + 1;
+
+    if (pulos >= 3) {
+        alert("Você foi eliminado por inatividade!");
+        // Marcar como eliminado (lógica simples: zerar a mão)
+        await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { eliminado: true, mao: [] });
+    } else {
+        await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { pulos: pulos });
+    }
+    
+    // Passa a vez
+    const listaNomes = Object.keys(dados.jogadores).filter(n => !dados.jogadores[n].eliminado);
+    let proximoTurno = listaNomes[(listaNomes.indexOf(meuNick) + 1) % listaNomes.length];
+    await update(ref(db, `salas/${salaID}`), { turno: proximoTurno });
+}
+
+// --- ESCUTAR JOGO ---
 onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     const dados = snapshot.val();
     if (!dados) return;
 
-    // 1. Atualiza a carta da mesa
+    // 1. Jogadores e Tempo
+    const listaJogDiv = document.getElementById('lista-jogadores');
+    listaJogDiv.innerHTML = "";
+    Object.keys(dados.jogadores).forEach(nick => {
+        const jog = dados.jogadores[nick];
+        const ativo = dados.turno === nick;
+        const div = document.createElement('div');
+        div.className = `card-jogador ${ativo ? 'jogador-ativo' : ''}`;
+        div.innerHTML = `
+            <span class="${jog.eliminado ? 'status-eliminado' : ''}">${nick} (${jog.mao ? jog.mao.length : 0})</span>
+            <span class="tempo-texto" id="tempo-${nick}">${ativo ? '20s' : ''}</span>
+            <div style="font-size: 8px">Faltas: ${jog.pulos || 0}/3</div>
+        `;
+        listaJogDiv.appendChild(div);
+    });
+
+    iniciarCronometro(dados.turno, dados);
+
+    // 2. Carta da Mesa
     const cartaMesaDiv = document.getElementById('cartaMesa');
     if (dados.cartaNaMesa) {
         const c = dados.cartaNaMesa;
-        const imgPath = `cartas/${c.valor}_${c.cor}.png`;
-        const imgPathAlt = `cartas/${c.cor}_${c.valor}.png`;
-
-        cartaMesaDiv.innerHTML = `<img src="${imgPath}" id="imgMesa" style="width: 120px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.7));">`;
-        
-        const imgEl = document.getElementById('imgMesa');
-        imgEl.onerror = () => {
-            // Se falhar o primeiro caminho, tenta o segundo
-            if (imgEl.src.includes(imgPath)) {
-                imgEl.src = imgPathAlt;
-            } else {
-                // Se ambos falharem, desenha a carta reserva
-                cartaMesaDiv.innerHTML = criarCartaReserva(c, 120);
-            }
-        };
+        cartaMesaDiv.innerHTML = `<img src="cartas/${c.valor}_${c.cor}.png" onerror="this.src='cartas/${c.cor}_${c.valor}.png'; this.onerror=function(){this.parentElement.innerHTML='${criarCartaReserva(c, 100)}'}" style="width: 100px;">`;
     }
 
-    // 2. Atualiza de quem é a vez
-    const txtVez = document.getElementById('txtVez');
-    txtVez.innerText = dados.turno === meuNick ? "SUA VEZ!" : `Vez de ${dados.turno}`;
-    txtVez.style.color = dados.turno === meuNick ? "#4caf50" : "#ffeb3b";
-
-    // 3. Renderiza minha mão
+    // 3. Minha Mão (Escalonamento Dinâmico)
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
     const minhasCartas = dados.jogadores[meuNick].mao || [];
+    
+    // Calculo do tamanho: se tiver muita carta, elas diminuem
+    let larguraCarta = 100;
+    if (minhasCartas.length > 7) larguraCarta = Math.max(50, 800 / minhasCartas.length);
+    let overlap = minhasCartas.length > 8 ? -larguraCarta * 0.3 : 5;
 
     minhasCartas.forEach((carta, index) => {
         const container = document.createElement('div');
-        container.style.display = "inline-block";
-        container.style.margin = "5px";
-        container.style.transition = "all 0.2s ease";
-        container.style.cursor = "pointer";
-
-        const imgPath = `cartas/${carta.valor}_${carta.cor}.png`;
-        const imgPathAlt = `cartas/${carta.cor}_${carta.valor}.png`;
+        container.className = "carta-container";
+        container.style.marginLeft = `${overlap}px`;
 
         const img = document.createElement('img');
-        img.src = imgPath;
-        img.style.width = "110px";
-        img.style.filter = "drop-shadow(0 5px 10px rgba(0,0,0,0.5))";
+        img.src = `cartas/${carta.valor}_${carta.cor}.png`;
+        img.style.width = `${larguraCarta}px`;
+        img.onerror = () => { img.parentElement.innerHTML = criarCartaReserva(carta, larguraCarta); };
 
-        img.onerror = () => {
-            if (img.src.includes(imgPath)) {
-                img.src = imgPathAlt;
-            } else {
-                container.innerHTML = criarCartaReserva(carta, 110);
-            }
-        };
-
-        container.onmouseover = () => { container.style.transform = "translateY(-30px) scale(1.1)"; container.style.zIndex = "100"; };
-        container.onmouseout = () => { container.style.transform = "translateY(0) scale(1)"; container.style.zIndex = "1"; };
+        container.onmouseover = () => { container.style.transform = "translateY(-20px)"; container.style.zIndex = "100"; };
+        container.onmouseout = () => { container.style.transform = "translateY(0)"; container.style.zIndex = "1"; };
         container.onclick = () => tentarJogarCarta(carta, index, dados);
 
         container.appendChild(img);
@@ -137,35 +161,36 @@ onValue(ref(db, `salas/${salaID}`), (snapshot) => {
     });
 });
 
-// --- LÓGICA DE JOGAR A CARTA ---
 async function tentarJogarCarta(carta, index, dados) {
-    if (dados.turno !== meuNick) return alert("Não é sua vez!");
+    if (dados.turno !== meuNick || dados.jogadores[meuNick].eliminado) return;
     const naMesa = dados.cartaNaMesa;
 
     if (carta.cor === naMesa.cor || carta.valor === naMesa.valor) {
         let novaMao = [...dados.jogadores[meuNick].mao];
         novaMao.splice(index, 1);
 
-        const listaNomes = Object.keys(dados.jogadores);
-        let proximoTurno = listaNomes[(listaNomes.indexOf(meuNick) + 1) % listaNomes.length];
+        const listaVivos = Object.keys(dados.jogadores).filter(n => !dados.jogadores[n].eliminado);
+        let proximoTurno = listaVivos[(listaVivos.indexOf(meuNick) + 1) % listaVivos.length];
 
         const updates = {};
         updates[`salas/${salaID}/cartaNaMesa`] = carta;
         updates[`salas/${salaID}/turno`] = proximoTurno;
         updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = novaMao;
+        // Se jogou, reseta os pulos de inatividade
+        updates[`salas/${salaID}/jogadores/${meuNick}/pulos`] = 0;
+
         await update(ref(db), updates);
-    } else {
-        alert("Esta carta não pode ser jogada agora!");
     }
 }
 
-document.getElementById('btnComprar').onclick = async () => {
+// BOTÃO COMPRAR COM FOTO DE TRÁS (jota.png)
+const btnComprar = document.getElementById('btnComprar');
+btnComprar.innerHTML = `<img src="cartas/jota.png" style="width: 60px; display: block; margin: auto;"> Comprar`;
+btnComprar.onclick = async () => {
     const snapshot = await get(ref(db, `salas/${salaID}`));
     const dados = snapshot.val();
-    if (dados.turno !== meuNick) return alert("Espere sua vez!");
+    if (dados.turno !== meuNick || dados.jogadores[meuNick].eliminado) return;
     let maoAtual = dados.jogadores[meuNick].mao || [];
     maoAtual.push(gerarCarta());
-    await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: maoAtual });
+    await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: maoAtual, pulos: 0 });
 };
-
-document.getElementById('btnSair').onclick = () => { if(confirm("Deseja sair?")) window.location.href = "index.html"; };
