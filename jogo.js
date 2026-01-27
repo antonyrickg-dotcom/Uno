@@ -24,9 +24,8 @@ document.getElementById('txtSalaID').innerText = salaID;
 // --- UTILITÁRIOS ---
 function gerarCarta() {
     const cores = ['red', 'blue', 'green', 'yellow'];
-    // Adicionei mais peso para cartas numéricas para balancear
-    const valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'draw2', 'skip', 'reverse', 'draw2'];
-    
+    // Mais +2 e especiais para testar a mecânica
+    const valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'draw2', 'draw2'];
     return { 
         cor: cores[Math.floor(Math.random() * cores.length)], 
         valor: valores[Math.floor(Math.random() * valores.length)] 
@@ -36,9 +35,9 @@ function gerarCarta() {
 function getNomeImagem(carta) {
     const especiais = ['skip', 'reverse', 'draw2'];
     if (especiais.includes(carta.valor)) {
-        return `cartas/${carta.valor}_${carta.cor}.png`; // Ex: skip_red.png
+        return `cartas/${carta.valor}_${carta.cor}.png`;
     }
-    return `cartas/${carta.cor}_${carta.valor}.png`; // Ex: red_0.png
+    return `cartas/${carta.cor}_${carta.valor}.png`;
 }
 
 function criarCartaReserva(carta, tamanho) {
@@ -48,156 +47,175 @@ function criarCartaReserva(carta, tamanho) {
     return `<div style="width:${tamanho}px; height:${tamanho*1.4}px; background:${corHex}; border:3px solid white; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:24px;">${label}</div>`;
 }
 
-// --- LÓGICA DE LISTA CIRCULAR (Para lidar com Reverse e Loop) ---
+// Lógica Circular
 function calcularIndiceProximo(indiceAtual, totalJogadores, sentido, pulos = 1) {
-    // A mágica matemática para o índice nunca sair da lista (mesmo negativo)
     return (((indiceAtual + (sentido * pulos)) % totalJogadores) + totalJogadores) % totalJogadores;
 }
 
-// --- LOOP PRINCIPAL DO JOGO ---
+// --- LOOP PRINCIPAL ---
 onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     const dados = snapshot.val();
-    if (!dados) {
-        document.getElementById('txtVez').innerText = "Sala fechada ou inexistente.";
-        return;
-    }
+    if (!dados) { document.getElementById('txtVez').innerText = "Sala fechada."; return; }
 
-    // --- SETUP INICIAL (Garante que sentido e turno existam) ---
+    // SETUP INICIAL
     const nicks = Object.keys(dados.jogadores);
-    if ((!dados.cartaNaMesa || !dados.turno || dados.sentido === undefined) && meuNick === nicks[0]) {
-        const updates = {};
-        if (!dados.cartaNaMesa) updates['cartaNaMesa'] = gerarCarta();
-        if (!dados.turno) updates['turno'] = nicks[0];
-        if (dados.sentido === undefined) updates['sentido'] = 1; // 1 = Horário, -1 = Anti-horário
-        await update(ref(db, `salas/${salaID}`), updates);
+    if ((!dados.cartaNaMesa || !dados.turno) && meuNick === nicks[0]) {
+        await update(ref(db, `salas/${salaID}`), {
+            cartaNaMesa: gerarCarta(),
+            turno: nicks[0],
+            sentido: 1,
+            acumulado: 0 // Novo campo para somar os +2
+        });
         return;
     }
 
-    // Se sou novo, crio minha mão
-    if (!dados.jogadores[meuNick] || !dados.jogadores[meuNick].mao) {
-        let novaMao = [];
-        for(let i=0; i<7; i++) novaMao.push(gerarCarta());
-        await set(ref(db, `salas/${salaID}/jogadores/${meuNick}/mao`), novaMao);
-        return;
+    if (!dados.jogadores[meuNick].mao) {
+        let m = []; for(let i=0; i<7; i++) m.push(gerarCarta());
+        await set(ref(db, `salas/${salaID}/jogadores/${meuNick}/mao`), m);
     }
 
     // --- INTERFACE ---
-    // Carta da Mesa
-    const cartaMesaDiv = document.getElementById('cartaMesa');
-    const cM = dados.cartaNaMesa;
-    if (cM) {
-        cartaMesaDiv.innerHTML = `<img src="${getNomeImagem(cM)}" style="width:120px; filter:drop-shadow(0 0 10px rgba(255,255,255,0.3));" 
-            onerror="this.parentElement.innerHTML='${criarCartaReserva(cM, 120).replace(/"/g, "'")}'">`;
-    }
-
-    // Texto de Turno (Com seta de direção)
+    
+    // Mostra se tem ACUMULADO na tela
+    const acumulado = dados.acumulado || 0;
     const txtVez = document.getElementById('txtVez');
-    const seta = dados.sentido === 1 ? "➡" : "⬅"; // Seta visual
-    txtVez.innerText = dados.turno === meuNick ? `⭐ SUA VEZ! (${seta})` : `Vez de ${dados.turno} (${seta})`;
+    const seta = (dados.sentido || 1) === 1 ? "➡" : "⬅";
+    
+    let msgStatus = dados.turno === meuNick ? `⭐ SUA VEZ! (${seta})` : `Vez de ${dados.turno} (${seta})`;
+    
+    // Se tiver acumulado, avisa em vermelho
+    if (acumulado > 0) {
+        msgStatus += ` <br><span style="color:#ff4444; font-weight:bold; font-size:18px;">PERIGO: +${acumulado} CARTAS!</span>`;
+    }
+    txtVez.innerHTML = msgStatus;
     txtVez.style.color = dados.turno === meuNick ? "#4caf50" : "white";
+
+    // Carta Mesa
+    const cM = dados.cartaNaMesa;
+    const cartaMesaDiv = document.getElementById('cartaMesa');
+    if (cM) {
+        cartaMesaDiv.innerHTML = `<img src="${getNomeImagem(cM)}" style="width:120px; filter:drop-shadow(0 0 10px rgba(255,255,255,0.3));" onerror="this.parentElement.innerHTML='${criarCartaReserva(cM, 120).replace(/"/g, "'")}'">`;
+    }
 
     // Minha Mão
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
-    const minhasCartas = dados.jogadores[meuNick].mao || [];
+    const mao = dados.jogadores[meuNick].mao || [];
 
-    minhasCartas.forEach((c, i) => {
+    mao.forEach((c, i) => {
         const div = document.createElement('div');
-        div.style.display = 'inline-block';
-        div.style.margin = '0 5px';
-        div.style.cursor = 'pointer';
-        div.innerHTML = `<img src="${getNomeImagem(c)}" style="width:90px; transition: transform 0.2s;" onerror="this.style.display='none'">`;
+        div.style.cssText = 'display:inline-block; margin:0 5px; cursor:pointer; transition: transform 0.2s;';
+        div.innerHTML = `<img src="${getNomeImagem(c)}" style="width:90px;" onerror="this.style.display='none'">`;
         
-        // Fallback se imagem falhar (ele esconde a img e mostra o div colorido)
         const img = div.querySelector('img');
         img.onerror = () => { div.innerHTML = criarCartaReserva(c, 90); div.onclick = () => jogarCarta(c, i, dados); };
         
-        div.onmouseover = () => { div.style.transform = "translateY(-20px)"; };
-        div.onmouseout = () => { div.style.transform = "translateY(0)"; };
+        div.onmouseover = () => div.style.transform = "translateY(-20px)";
+        div.onmouseout = () => div.style.transform = "translateY(0)";
         div.onclick = () => jogarCarta(c, i, dados);
-        
         minhaMaoDiv.appendChild(div);
     });
 });
 
-// --- LÓGICA COMPLEXA DE JOGADA ---
+// --- AÇÃO: JOGAR CARTA ---
 async function jogarCarta(carta, index, dados) {
     if (dados.turno !== meuNick) return alert("Não é sua vez!");
 
     const mesa = dados.cartaNaMesa;
-    // Regra Básica de Validação
-    if (carta.cor !== mesa.cor && carta.valor !== mesa.valor) {
-        return alert("Carta inválida! Cor ou Valor devem coincidir.");
+    const acumulado = dados.acumulado || 0;
+
+    // --- REGRA DE DEFESA DO +2 ---
+    // Se tiver acumulado pendente, SÓ pode jogar +2
+    if (acumulado > 0 && carta.valor !== 'draw2') {
+        return alert(`Você tem +${acumulado} acumulado! Jogue outro +2 para rebater ou compre as cartas.`);
     }
 
-    // 1. Preparar dados
+    // Validação normal (Cor ou Valor)
+    // Exceção: Se for +2, pode jogar em cima de qualquer cor se tiver acumulado
+    if (acumulado === 0 && carta.cor !== mesa.cor && carta.valor !== mesa.valor) {
+        return alert("Carta inválida!");
+    }
+
+    // PREPARAR ATUALIZAÇÃO
     const nicks = Object.keys(dados.jogadores);
     let meuIndice = nicks.indexOf(meuNick);
-    let sentidoAtual = dados.sentido || 1;
+    let sentido = dados.sentido || 1;
+    let novoAcumulado = acumulado;
     let proximoIndice;
-    
-    // Objeto de atualizações para enviar tudo de uma vez ao Firebase
     const updates = {};
-    
-    // Remover minha carta
-    let minhaNovaMao = [...dados.jogadores[meuNick].mao];
-    minhaNovaMao.splice(index, 1);
-    updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = minhaNovaMao;
+
+    // Remove carta da mão
+    let novaMao = [...dados.jogadores[meuNick].mao];
+    novaMao.splice(index, 1);
+    updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = novaMao;
     updates[`salas/${salaID}/cartaNaMesa`] = carta;
 
-    // --- 2. EFEITOS ESPECIAIS ---
-    
-    if (carta.valor === 'reverse') {
-        // Se só tem 2 jogadores, Reverse age como Skip (Pula o outro)
+    // --- EFEITOS ---
+    if (carta.valor === 'draw2') {
+        novoAcumulado += 2; // SOMA NO ACUMULADO
+        // Não pula ninguém! Passa a vez pro próximo tentar defender.
+        proximoIndice = calcularIndiceProximo(meuIndice, nicks.length, sentido, 1);
+    } 
+    else if (carta.valor === 'reverse') {
         if (nicks.length === 2) {
-            proximoIndice = meuIndice; // Volta pra mim
+            proximoIndice = meuIndice; // 2 jogadores = funciona como skip
         } else {
-            sentidoAtual *= -1; // Inverte direção
-            updates[`salas/${salaID}/sentido`] = sentidoAtual;
-            proximoIndice = calcularIndiceProximo(meuIndice, nicks.length, sentidoAtual, 1);
+            sentido *= -1;
+            updates[`salas/${salaID}/sentido`] = sentido;
+            proximoIndice = calcularIndiceProximo(meuIndice, nicks.length, sentido, 1);
         }
     } 
-    
     else if (carta.valor === 'skip') {
-        // Pula 1 pessoa (avança 2 posições)
-        proximoIndice = calcularIndiceProximo(meuIndice, nicks.length, sentidoAtual, 2);
+        proximoIndice = calcularIndiceProximo(meuIndice, nicks.length, sentido, 2);
     } 
-    
-    else if (carta.valor === 'draw2') {
-        // 1. Acha quem vai tomar o +2
-        let indiceVitima = calcularIndiceProximo(meuIndice, nicks.length, sentidoAtual, 1);
-        let nickVitima = nicks[indiceVitima];
-        
-        // 2. Dá as cartas pra vitima
-        let maoVitima = dados.jogadores[nickVitima].mao || [];
-        maoVitima.push(gerarCarta());
-        maoVitima.push(gerarCarta());
-        updates[`salas/${salaID}/jogadores/${nickVitima}/mao`] = maoVitima;
-
-        // 3. Pula a vez da vítima (quem joga é o próximo depois dela)
-        proximoIndice = calcularIndiceProximo(meuIndice, nicks.length, sentidoAtual, 2);
-    } 
-    
     else {
-        // Carta Normal
-        proximoIndice = calcularIndiceProximo(meuIndice, nicks.length, sentidoAtual, 1);
+        proximoIndice = calcularIndiceProximo(meuIndice, nicks.length, sentido, 1);
     }
 
-    // Definir quem joga agora
+    updates[`salas/${salaID}/acumulado`] = novoAcumulado;
     updates[`salas/${salaID}/turno`] = nicks[proximoIndice];
 
-    // Enviar tudo pro Firebase
     await update(ref(db), updates);
 }
 
+// --- AÇÃO: COMPRAR (ACEITAR O ACUMULADO OU COMPRAR 1) ---
 document.getElementById('btnComprar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
     if (d.turno !== meuNick) return alert("Espere sua vez!");
 
-    let m = d.jogadores[meuNick].mao || [];
-    m.push(gerarCarta());
-    await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: m });
+    const acumulado = d.acumulado || 0;
+    let qtdComprar = 1;
+    let perdeuVez = false;
+
+    // Se tem acumulado, compra tudo e perde a vez
+    if (acumulado > 0) {
+        if(!confirm(`Você não defendeu! Deseja comprar ${acumulado} cartas?`)) return;
+        qtdComprar = acumulado;
+        perdeuVez = true; // Aceitou a punição, perde a vez
+    }
+
+    let novaMao = d.jogadores[meuNick].mao || [];
+    for(let i=0; i<qtdComprar; i++) novaMao.push(gerarCarta());
+
+    const updates = {};
+    updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = novaMao;
+    
+    // Se comprou o acumulado, ZERA ele e PASSA a vez
+    if (acumulado > 0) {
+        updates[`salas/${salaID}/acumulado`] = 0;
+        
+        const nicks = Object.keys(d.jogadores);
+        const sentido = d.sentido || 1;
+        const meuIndice = nicks.indexOf(meuNick);
+        const proximo = calcularIndiceProximo(meuIndice, nicks.length, sentido, 1);
+        
+        updates[`salas/${salaID}/turno`] = nicks[proximo];
+    } 
+    // Se comprou normal (1 carta), mantém a vez para tentar jogar (opcional, aqui mantive a vez)
+    // Se quiser que passe a vez ao comprar 1, descomente as linhas de turno abaixo
+
+    await update(ref(db), updates);
 };
 
 document.getElementById('btnSair').onclick = () => { if(confirm("Sair?")) window.location.href = "index.html"; };
