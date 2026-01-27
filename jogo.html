@@ -2,107 +2,141 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>UNO Arena - Em Partida</title>
     <style>
+        /* CSS Base para evitar scroll errado e preparar o layout */
         body {
             background: radial-gradient(circle, #2c3e50 0%, #000000 100%);
             color: white;
             font-family: 'Arial Black', sans-serif;
             margin: 0;
             height: 100vh;
+            width: 100vw;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            touch-action: manipulation;
         }
 
+        /* Container que segura tudo */
+        #container-jogo {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Topo com info da sala e jogadores */
         .topo-jogo {
             background: rgba(0, 0, 0, 0.8);
-            padding: 15px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 10px;
             border-bottom: 2px solid #444;
             z-index: 100;
         }
 
-        #txtVez { color: #ffeb3b; font-size: 1.1rem; }
+        #lista-jogadores {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
 
+        /* Área central da mesa */
         .mesa {
             flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 60px;
-        }
-
-        /* AJUSTADO: Containers invisíveis para as imagens PNG brilharem */
-        .card, #cartaMesa {
-            width: 110px;
-            height: 165px;
+            gap: 30px;
             position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-            /* Limpeza total do CSS antigo para usar as imagens */
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
         }
 
-        /* Baralho de Compra (Verso da Carta) */
-        .baralho-compra {
-            width: 110px;
-            height: 165px;
-            border-radius: 12px;
-            border: 6px solid white;
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        #cartaMesa img {
+            width: 120px;
+            filter: drop-shadow(0 0 15px rgba(255,0,0,0.5));
+        }
+
+        /* Botão de comprar personalizado com jota.png */
+        #btnComprar {
+            background: none;
+            border: none;
             cursor: pointer;
             transition: transform 0.2s;
+            text-align: center;
+            color: white;
+            font-size: 12px;
         }
-        .baralho-compra:hover { transform: scale(1.05); }
-        .baralho-compra span { transform: rotate(-90deg); font-size: 1.5rem; color: white; }
+        #btnComprar:hover { transform: scale(1.05); }
 
-        .mao-jogador {
-            background: rgba(0,0,0,0.4);
-            width: 100%;
-            padding: 40px;
+        /* Rodapé com a sua mão */
+        .mao-jogador-container {
+            background: rgba(0,0,0,0.6);
+            padding: 10px 0;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #txtVez {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            text-shadow: 0 0 10px rgba(0,0,0,1);
+        }
+
+        #minhaMao {
             display: flex;
             justify-content: center;
             align-items: flex-end;
-            min-height: 200px;
-            gap: 10px; /* Cartas mais próximas para parecer uma mão real */
+            width: 100%;
+            height: 120px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0 20px;
+            box-sizing: border-box;
         }
 
-        .btn-sair { background: #f44336; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        
-        /* Garante que a imagem preencha o container */
-        img {
-            max-width: 100%;
-            height: auto;
-            pointer-events: none; /* Deixa o clique passar para a div pai se necessário */
+        .btn-sair { 
+            background: #f44336; 
+            color: white; 
+            border: none; 
+            padding: 5px 15px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 12px;
         }
+
+        /* Esconder scrollbar da mão para ficar mais bonito */
+        #minhaMao::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
-    <div class="topo-jogo">
-        <div>SALA: <b id="txtSalaID">---</b> | <span id="txtVez">Carregando...</span></div>
-        <button id="btnSair" class="btn-sair">SAIR</button>
-    </div>
-    <div class="mesa">
-        <div class="baralho-compra" id="btnComprar"><span>UNO</span></div>
-        <div id="cartaMesa">
-            <span>?</span>
+
+    <div id="container-jogo">
+        <div class="topo-jogo">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>SALA: <b id="txtSalaID">---</b></span>
+                <button id="btnSair" class="btn-sair">SAIR</button>
+            </div>
+            <div id="lista-jogadores"></div>
+        </div>
+
+        <div class="mesa">
+            <div id="btnComprar"></div>
+            
+            <div id="cartaMesa">
+                </div>
+        </div>
+
+        <div class="mao-jogador-container">
+            <div id="txtVez">Carregando...</div>
+            <div id="minhaMao">
+                </div>
         </div>
     </div>
-    <div class="mao-jogador" id="minhaMao">
-        </div>
+
     <script type="module" src="jogo.js"></script>
 </body>
 </html>
