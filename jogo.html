@@ -44,49 +44,47 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 20px;
-            padding-bottom: 160px; /* Espaço para a mão não cobrir a mesa */
+            gap: 15px;
+            padding-bottom: 140px; 
         }
 
         #txtVez {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             text-align: center;
             text-shadow: 0 0 10px rgba(0,0,0,1);
-            margin-bottom: 10px;
-            min-height: 50px;
+            min-height: 45px;
         }
 
         .mesa-display {
             display: flex;
             align-items: center;
-            gap: 30px;
+            gap: 20px;
         }
 
-        #cartaMesa {
-            min-width: 110px;
-            min-height: 160px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        #cartaMesa img {
+            width: 100px;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
         }
 
         #btnComprar {
             background: none;
             border: none;
             cursor: pointer;
-            transition: transform 0.2s;
             text-align: center;
             color: white;
         }
 
-        #btnComprar:active { transform: scale(0.9); }
+        #btnComprar img {
+            width: 80px;
+            border-radius: 8px;
+            border: 2px solid white;
+        }
 
-        /* Rodapé: Minha Mão com Empilhamento */
+        /* Rodapé: Mão Inteligente para Mobile */
         .mao-container {
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.7);
             width: 100%;
-            padding: 20px 0 40px 0;
-            min-height: 120px;
+            padding: 15px 0 35px 0;
             position: fixed;
             bottom: 0;
             display: flex;
@@ -94,28 +92,36 @@
             align-items: center;
             border-top: 2px solid rgba(255,255,255,0.1);
             z-index: 100;
+            overflow: visible;
         }
 
         #minhaMao {
             display: flex;
             justify-content: center;
             align-items: center;
-            width: auto;
-            padding: 0 20px;
+            width: 95vw; /* Ocupa quase a tela toda */
+            max-width: 600px;
         }
 
-        /* Estilo das cartas empilhadas */
         .carta-slot {
             transition: all 0.2s ease;
             cursor: pointer;
             position: relative;
-            margin-left: -45px; /* Empilhamento lateral */
+            flex-shrink: 1; /* A carta encolhe se faltar espaço */
+            min-width: 10px; 
         }
 
-        .carta-slot:first-child { margin-left: 0; }
+        .carta-slot img {
+            width: 75px; /* Tamanho ideal para mobile */
+            height: auto;
+            border: 1px solid white;
+            border-radius: 6px;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+            display: block;
+        }
 
         .carta-slot:hover {
-            transform: translateY(-30px) scale(1.1);
+            transform: translateY(-30px);
             z-index: 999 !important;
         }
 
@@ -130,14 +136,13 @@
     </div>
 
     <div class="area-central">
-        <div id="txtVez">Carregando partida...</div>
+        <div id="txtVez">Carregando...</div>
         
         <div class="mesa-display">
             <div id="btnComprar">
-                <img src="cartas/jota.png" style="width: 85px; border-radius: 8px; border: 3px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
-                <div style="margin-top: 5px; font-size: 11px;">COMPRAR</div>
+                <img src="cartas/jota.png">
+                <div style="margin-top: 5px; font-size: 10px;">COMPRAR</div>
             </div>
-
             <div id="cartaMesa"></div>
         </div>
     </div>
