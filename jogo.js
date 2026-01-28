@@ -36,57 +36,54 @@ function calcProx(atual, total, sentido, pulos = 1) {
     return (((atual + (sentido * pulos)) % total) + total) % total;
 }
 
+// ESCUTAR MUDANÇAS NO JOGO
 onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     const dados = snapshot.val();
     if (!dados || !dados.jogadores) return;
 
+    // LÓGICA DE VITÓRIA
+    if (dados.vencedor) {
+        document.getElementById('telaVitoria').style.display = 'flex';
+        document.getElementById('txtVencedor').innerText = dados.vencedor === meuNick ? "VOCÊ VENCEU! 🎉" : `${dados.vencedor} VENCEU!`;
+        return;
+    } else {
+        document.getElementById('telaVitoria').style.display = 'none';
+    }
+
     const nicks = Object.keys(dados.jogadores);
     
-    // 1. CORREÇÃO DAS CARTAS INICIAIS: Se o jogador não tem cartas, dá 7 cartas.
+    // Distribuir cartas iniciais (7 para cada)
     if (!dados.jogadores[meuNick].mao || dados.jogadores[meuNick].mao.length === 0) {
         let novaMao = [];
         for (let i = 0; i < 7; i++) novaMao.push(gerarCarta());
         await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: novaMao });
-        return; 
-    }
-
-    // Inicializa a mesa se for o primeiro jogador
-    if (!dados.turno && meuNick === nicks[0]) {
-        await update(ref(db, `salas/${salaID}`), {
-            turno: nicks[0],
-            cartaNaMesa: gerarCarta(),
-            sentido: 1,
-            acumulado: 0
-        });
         return;
     }
 
-    // Trava para evitar undefined no texto
-    const turnoAtual = dados.turno || "Aguardando...";
+    // Inicializar mesa
+    if (!dados.turno && meuNick === nicks[0]) {
+        await update(ref(db, `salas/${salaID}`), { turno: nicks[0], cartaNaMesa: gerarCarta(), sentido: 1, acumulado: 0 });
+        return;
+    }
+
     const isMinhaVez = dados.turno === meuNick;
     const mao = dados.jogadores[meuNick].mao || [];
-    const acumulado = dados.acumulado || 0;
-
-    // 2. CORREÇÃO DO BOTÃO UNO: Aparece se tiver 2 cartas e for sua vez
-    document.getElementById('btnUno').style.display = (isMinhaVez && mao.length === 2) ? 'block' : 'none';
     
-    // Botão Passar e Desafiar
-    document.getElementById('btnPassar').style.display = (isMinhaVez && dados.comprouNaVez && acumulado === 0) ? 'block' : 'none';
+    // Interface
+    document.getElementById('btnUno').style.display = (isMinhaVez && mao.length === 2) ? 'block' : 'none';
+    document.getElementById('btnPassar').style.display = (isMinhaVez && dados.comprouNaVez && (dados.acumulado || 0) === 0) ? 'block' : 'none';
+    
     const vitima = nicks.find(n => dados.jogadores[n].esqueceuUno === true);
     document.getElementById('btnDenunciar').style.display = (vitima && vitima !== meuNick) ? 'block' : 'none';
 
     // Status
     const seta = (dados.sentido || 1) === 1 ? "➡" : "⬅";
-    let statusHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ! ${seta}</b>` : `Vez de ${turnoAtual} ${seta}`;
-    if (acumulado > 0) statusHTML += `<br><span style="color:#ff4444">+${acumulado} CARTAS!</span>`;
-    document.getElementById('txtVez').innerHTML = statusHTML;
+    document.getElementById('txtVez').innerHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ! ${seta}</b>` : `Vez de ${dados.turno} ${seta}`;
 
     // Mesa
-    if (dados.cartaNaMesa) {
-        document.getElementById('cartaMesa').innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
-    }
+    if (dados.cartaNaMesa) document.getElementById('cartaMesa').innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
 
-    // Renderizar Mão
+    // Mão
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
     mao.forEach((c, i) => {
@@ -108,22 +105,21 @@ async function jogarCarta(carta, index, dados) {
     let novaMao = [...dados.jogadores[meuNick].mao];
     novaMao.splice(index, 1);
     
+    // VERIFICA SE VENCEU
+    if (novaMao.length === 0) {
+        await update(ref(db, `salas/${salaID}`), { vencedor: meuNick });
+        return;
+    }
+
     const nicks = Object.keys(dados.jogadores);
     let sentido = dados.sentido || 1;
     let novoAcumulado = acumulado;
     let proximo;
 
-    if (carta.valor === 'draw2') {
-        novoAcumulado += 2;
-        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1);
-    } else if (carta.valor === 'reverse') {
-        sentido *= -1;
-        proximo = (nicks.length === 2) ? nicks.indexOf(meuNick) : calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1);
-    } else if (carta.valor === 'skip') {
-        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 2);
-    } else {
-        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1);
-    }
+    if (carta.valor === 'draw2') { novoAcumulado += 2; proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); }
+    else if (carta.valor === 'reverse') { sentido *= -1; proximo = (nicks.length === 2) ? nicks.indexOf(meuNick) : calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); }
+    else if (carta.valor === 'skip') { proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 2); }
+    else { proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); }
 
     const updates = {};
     updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = novaMao;
@@ -138,12 +134,11 @@ async function jogarCarta(carta, index, dados) {
         setTimeout(() => update(ref(db), {[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`]: false}), 5000);
     }
     apertouUno = false;
-
     await update(ref(db), updates);
 }
 
+// BOTOES DE AÇÃO
 document.getElementById('btnUno').onclick = () => { apertouUno = true; alert("UNO!"); };
-
 document.getElementById('btnComprar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
@@ -163,6 +158,17 @@ document.getElementById('btnComprar').onclick = async () => {
     await update(ref(db), ups);
 };
 
+// BOTÕES DA TELA DE VITÓRIA
+document.getElementById('btnReiniciar').onclick = async () => {
+    const snap = await get(ref(db, `salas/${salaID}`));
+    const d = snap.val();
+    const updates = { vencedor: null, turno: null, acumulado: 0, comprouNaVez: false };
+    Object.keys(d.jogadores).forEach(nick => { updates[`jogadores/${nick}/mao`] = []; updates[`jogadores/${nick}/esqueceuUno`] = false; });
+    await update(ref(db, `salas/${salaID}`), updates);
+};
+
+document.getElementById('btnVoltarLobby').onclick = () => window.location.href = "index.html";
+document.getElementById('btnSair').onclick = () => window.location.href = "index.html";
 document.getElementById('btnPassar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
@@ -170,17 +176,3 @@ document.getElementById('btnPassar').onclick = async () => {
     const prox = nicks[calcProx(nicks.indexOf(meuNick), nicks.length, d.sentido || 1, 1)];
     await update(ref(db), { [`salas/${salaID}/turno`] : prox, [`salas/${salaID}/comprouNaVez`]: false });
 };
-
-document.getElementById('btnDenunciar').onclick = async () => {
-    const snap = await get(ref(db, `salas/${salaID}`));
-    const d = snap.val();
-    const vitima = Object.keys(d.jogadores).find(n => d.jogadores[n].esqueceuUno === true);
-    if (vitima) {
-        let m = d.jogadores[vitima].mao || [];
-        m.push(gerarCarta(), gerarCarta());
-        await update(ref(db), { [`salas/${salaID}/jogadores/${vitima}/mao`]: m, [`salas/${salaID}/jogadores/${vitima}/esqueceuUno`]: false });
-        alert(`DESAFIO! ${vitima} comprou +2.`);
-    }
-};
-
-document.getElementById('btnSair').onclick = () => window.location.href = "index.html";
