@@ -45,7 +45,7 @@
             justify-content: center;
             align-items: center;
             gap: 15px;
-            padding-bottom: 140px; 
+            padding-bottom: 160px; 
         }
 
         #txtVez {
@@ -62,7 +62,7 @@
         }
 
         #cartaMesa img {
-            width: 100px;
+            width: 110px;
             filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
         }
 
@@ -75,57 +75,67 @@
         }
 
         #btnComprar img {
-            width: 80px;
+            width: 85px;
             border-radius: 8px;
             border: 2px solid white;
         }
 
-        /* Rodapé: Mão Inteligente para Mobile */
+        /* --- NOVO RODAPÉ COM ARRASTE (SCROLL) --- */
         .mao-container {
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.85);
             width: 100%;
-            padding: 15px 0 35px 0;
+            padding: 25px 0 45px 0;
             position: fixed;
             bottom: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-top: 2px solid rgba(255,255,255,0.1);
+            border-top: 3px solid rgba(255,255,255,0.1);
             z-index: 100;
-            overflow: visible;
+
+            /* Habilita o scroll horizontal */
+            overflow-x: auto;
+            overflow-y: visible;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch; /* Suavidade no mobile */
+        }
+
+        /* Esconde a barra de rolagem */
+        .mao-container::-webkit-scrollbar {
+            display: none;
         }
 
         #minhaMao {
-            display: flex;
-            justify-content: center;
+            display: inline-flex;
+            padding: 0 60px; /* Respiro nas pontas */
             align-items: center;
-            width: 95vw; /* Ocupa quase a tela toda */
-            max-width: 600px;
+            min-width: 100%;
         }
 
         .carta-slot {
-            transition: all 0.2s ease;
+            display: inline-block;
+            transition: transform 0.2s ease;
             cursor: pointer;
             position: relative;
-            flex-shrink: 1; /* A carta encolhe se faltar espaço */
-            min-width: 10px; 
+            margin-left: -35px; /* Leve empilhamento */
+            flex-shrink: 0;
+        }
+
+        .carta-slot:first-child {
+            margin-left: 0;
         }
 
         .carta-slot img {
-            width: 75px; /* Tamanho ideal para mobile */
+            width: 95px; /* Tamanho fixo para não bugar no arraste */
             height: auto;
-            border: 1px solid white;
-            border-radius: 6px;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.5);
-            display: block;
+            border: 1.5px solid white;
+            border-radius: 10px;
+            box-shadow: -4px 0 10px rgba(0,0,0,0.6);
+            pointer-events: none; /* Melhora o arraste no mobile */
         }
 
-        .carta-slot:hover {
-            transform: translateY(-30px);
+        /* Efeito ao tocar/passar mouse */
+        .carta-slot:active {
+            transform: translateY(-20px) scale(1.05);
             z-index: 999 !important;
         }
-
-        .mao-container::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
@@ -136,12 +146,12 @@
     </div>
 
     <div class="area-central">
-        <div id="txtVez">Carregando...</div>
+        <div id="txtVez">Aguardando...</div>
         
         <div class="mesa-display">
             <div id="btnComprar">
                 <img src="cartas/jota.png">
-                <div style="margin-top: 5px; font-size: 10px;">COMPRAR</div>
+                <div style="margin-top: 5px; font-size: 11px; font-weight: bold;">COMPRAR</div>
             </div>
             <div id="cartaMesa"></div>
         </div>
