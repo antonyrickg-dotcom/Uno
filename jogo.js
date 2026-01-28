@@ -46,7 +46,7 @@ function calcProx(atual, total, sentido, pulos = 1) {
     return (((atual + (sentido * pulos)) % total) + total) % total;
 }
 
-// --- ESCUTAR FIREBASE (JOGO E CHAT) ---
+// --- ESCUTAR FIREBASE ---
 
 onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     const dados = snapshot.val();
@@ -112,12 +112,15 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     });
 });
 
-// --- LÓGICA DE JOGADAS E CURINGA ---
+// --- LÓGICA DE JOGADAS ---
 
 function preVerificarJogada(carta, index, dados) {
     if (dados.turno !== meuNick) return;
-    if (carta.cor === 'black') {
-        cartaPendente = carta; indicePendente = index;
+    
+    // CORREÇÃO: Abre o modal para qualquer carta preta (wild ou wild_draw4)
+    if (carta.cor === 'black' || carta.valor.includes('wild')) {
+        cartaPendente = carta; 
+        indicePendente = index;
         document.getElementById('modalCores').style.display = 'flex';
         return;
     }
@@ -136,9 +139,11 @@ window.escolherNovaCor = async (cor) => {
 
 async function processarJogada(carta, index, dados) {
     const acumulado = dados.acumulado || 0;
-    if (carta.originalCor !== 'black') {
+
+    // CORREÇÃO: Ignora validação de cor se a carta for Curinga
+    if (carta.originalCor !== 'black' && carta.cor !== 'black') {
         if (acumulado > 0 && carta.valor !== 'draw2') return alert("Compre ou jogue +2!");
-        if (acumulado === 0 && carta.cor !== dados.cartaNaMesa.cor && carta.valor !== dados.cartaNaMesa.valor) return alert("Inválida!");
+        if (carta.cor !== dados.cartaNaMesa.cor && carta.valor !== dados.cartaNaMesa.valor) return alert("Inválida!");
     }
 
     let novaMao = [...dados.jogadores[meuNick].mao];
@@ -167,18 +172,22 @@ async function processarJogada(carta, index, dados) {
     });
 }
 
-// --- LÓGICA DO CHAT (PC E CELULAR) ---
+// --- CHAT E ARRASTE ---
 
 const containerChat = document.getElementById('containerChat');
 const headerChat = document.getElementById('headerChat');
 const campoMsg = document.getElementById('campoMsg');
 const btnAbrirChat = document.getElementById('btnAbrirChat');
 
-// Abrir/Fechar no Celular
-btnAbrirChat.onclick = () => containerChat.classList.toggle('aberto');
+// Corrigido: Toggle de abertura no mobile
+btnAbrirChat.addEventListener('click', () => {
+    containerChat.classList.toggle('aberto');
+    if(containerChat.classList.contains('aberto')) containerChat.style.display = 'flex';
+    else containerChat.style.display = 'none';
+});
 
-// Enviar Mensagem (Enter no PC)
-campoMsg.onkeydown = async (e) => {
+// Corrigido: Enviar mensagem no PC
+campoMsg.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
         const txt = campoMsg.value.trim();
         if (!txt) return;
@@ -190,9 +199,8 @@ campoMsg.onkeydown = async (e) => {
         await set(chatRef, msgs);
         campoMsg.value = "";
     }
-};
+});
 
-// --- ARRASTAR CHAT (MOUSE E TOUCH) ---
 let isDragging = false;
 let startX, startY, initialX, initialY;
 
@@ -225,6 +233,7 @@ window.addEventListener('mouseup', () => isDragging = false);
 window.addEventListener('touchend', () => isDragging = false);
 
 // --- OUTROS BOTÕES ---
+
 document.getElementById('btnComprar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
