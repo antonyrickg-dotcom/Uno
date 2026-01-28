@@ -36,16 +36,21 @@ function calcProx(atual, total, sentido, pulos = 1) {
     return (((atual + (sentido * pulos)) % total) + total) % total;
 }
 
-// LOOP PRINCIPAL
 onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     const dados = snapshot.val();
-    
-    // CORREÇÃO DO UNDEFINED: Se os dados não existirem ou o turno não for definido, para aqui.
     if (!dados || !dados.jogadores) return;
 
     const nicks = Object.keys(dados.jogadores);
     
-    // Configuração inicial da partida
+    // 1. CORREÇÃO DAS CARTAS INICIAIS: Se o jogador não tem cartas, dá 7 cartas.
+    if (!dados.jogadores[meuNick].mao || dados.jogadores[meuNick].mao.length === 0) {
+        let novaMao = [];
+        for (let i = 0; i < 7; i++) novaMao.push(gerarCarta());
+        await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: novaMao });
+        return; 
+    }
+
+    // Inicializa a mesa se for o primeiro jogador
     if (!dados.turno && meuNick === nicks[0]) {
         await update(ref(db, `salas/${salaID}`), {
             turno: nicks[0],
@@ -56,32 +61,32 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
         return;
     }
 
-    // Se o turno ainda não veio do banco, não faz nada para evitar o "undefined"
-    if (!dados.turno) return;
-
+    // Trava para evitar undefined no texto
+    const turnoAtual = dados.turno || "Aguardando...";
     const isMinhaVez = dados.turno === meuNick;
     const mao = dados.jogadores[meuNick].mao || [];
     const acumulado = dados.acumulado || 0;
 
-    // Interface dos botões extras
+    // 2. CORREÇÃO DO BOTÃO UNO: Aparece se tiver 2 cartas e for sua vez
     document.getElementById('btnUno').style.display = (isMinhaVez && mao.length === 2) ? 'block' : 'none';
-    document.getElementById('btnPassar').style.display = (isMinhaVez && dados.comprouNaVez && acumulado === 0) ? 'block' : 'none';
     
+    // Botão Passar e Desafiar
+    document.getElementById('btnPassar').style.display = (isMinhaVez && dados.comprouNaVez && acumulado === 0) ? 'block' : 'none';
     const vitima = nicks.find(n => dados.jogadores[n].esqueceuUno === true);
     document.getElementById('btnDenunciar').style.display = (vitima && vitima !== meuNick) ? 'block' : 'none';
 
-    // Status do Turno
+    // Status
     const seta = (dados.sentido || 1) === 1 ? "➡" : "⬅";
-    let statusHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ! ${seta}</b>` : `Vez de ${dados.turno} ${seta}`;
+    let statusHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ! ${seta}</b>` : `Vez de ${turnoAtual} ${seta}`;
     if (acumulado > 0) statusHTML += `<br><span style="color:#ff4444">+${acumulado} CARTAS!</span>`;
     document.getElementById('txtVez').innerHTML = statusHTML;
 
-    // Carta na Mesa
+    // Mesa
     if (dados.cartaNaMesa) {
         document.getElementById('cartaMesa').innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
     }
 
-    // Minha Mão
+    // Renderizar Mão
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
     mao.forEach((c, i) => {
@@ -97,7 +102,7 @@ async function jogarCarta(carta, index, dados) {
     if (dados.turno !== meuNick) return;
     const acumulado = dados.acumulado || 0;
 
-    if (acumulado > 0 && carta.valor !== 'draw2') return alert(`Compre as +${acumulado} cartas ou jogue outro +2!`);
+    if (acumulado > 0 && carta.valor !== 'draw2') return alert("Compre as cartas!");
     if (acumulado === 0 && carta.cor !== dados.cartaNaMesa.cor && carta.valor !== dados.cartaNaMesa.valor) return alert("Carta inválida!");
 
     let novaMao = [...dados.jogadores[meuNick].mao];
@@ -130,26 +135,23 @@ async function jogarCarta(carta, index, dados) {
 
     if (novaMao.length === 1 && !apertouUno) {
         updates[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`] = true;
-        setTimeout(() => update(ref(db), {[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`]: false}), 4000);
+        setTimeout(() => update(ref(db), {[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`]: false}), 5000);
     }
     apertouUno = false;
 
     await update(ref(db), updates);
 }
 
-document.getElementById('btnUno').onclick = () => { apertouUno = true; alert("Você gritou UNO!"); };
+document.getElementById('btnUno').onclick = () => { apertouUno = true; alert("UNO!"); };
 
 document.getElementById('btnComprar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
     if (d.turno !== meuNick || d.comprouNaVez) return;
-
-    const acumulado = d.acumulado || 0;
     let m = d.jogadores[meuNick].mao || [];
     const ups = {};
-
-    if (acumulado > 0) {
-        for(let i=0; i<acumulado; i++) m.push(gerarCarta());
+    if (d.acumulado > 0) {
+        for(let i=0; i<d.acumulado; i++) m.push(gerarCarta());
         ups[`salas/${salaID}/acumulado`] = 0;
         const nicks = Object.keys(d.jogadores);
         ups[`salas/${salaID}/turno`] = nicks[calcProx(nicks.indexOf(meuNick), nicks.length, d.sentido || 1, 1)];
@@ -157,7 +159,6 @@ document.getElementById('btnComprar').onclick = async () => {
         m.push(gerarCarta());
         ups[`salas/${salaID}/comprouNaVez`] = true;
     }
-
     ups[`salas/${salaID}/jogadores/${meuNick}/mao`] = m;
     await update(ref(db), ups);
 };
@@ -167,7 +168,7 @@ document.getElementById('btnPassar').onclick = async () => {
     const d = snap.val();
     const nicks = Object.keys(d.jogadores);
     const prox = nicks[calcProx(nicks.indexOf(meuNick), nicks.length, d.sentido || 1, 1)];
-    await update(ref(db), { [`salas/${salaID}/turno`]: prox, [`salas/${salaID}/comprouNaVez`]: false });
+    await update(ref(db), { [`salas/${salaID}/turno`] : prox, [`salas/${salaID}/comprouNaVez`]: false });
 };
 
 document.getElementById('btnDenunciar').onclick = async () => {
@@ -178,8 +179,8 @@ document.getElementById('btnDenunciar').onclick = async () => {
         let m = d.jogadores[vitima].mao || [];
         m.push(gerarCarta(), gerarCarta());
         await update(ref(db), { [`salas/${salaID}/jogadores/${vitima}/mao`]: m, [`salas/${salaID}/jogadores/${vitima}/esqueceuUno`]: false });
-        alert(`DESAFIO! ${vitima} não disse UNO e comprou +2.`);
+        alert(`DESAFIO! ${vitima} comprou +2.`);
     }
 };
 
-document.getElementById('btnSair').onclick = () => { if(confirm("Sair?")) window.location.href = "index.html"; };
+document.getElementById('btnSair').onclick = () => window.location.href = "index.html";
