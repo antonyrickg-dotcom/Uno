@@ -52,6 +52,24 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
 
     const nicks = Object.keys(dados.jogadores);
     
+    // --- ATUALIZAR LISTA DE JOGADORES E QUANTIDADE DE CARTAS ---
+    const listaDiv = document.getElementById('listaJogadores');
+    if (listaDiv) {
+        listaDiv.innerHTML = "";
+        nicks.forEach(nick => {
+            const qtdCartas = dados.jogadores[nick].mao ? dados.jogadores[nick].mao.length : 0;
+            const isVezDele = dados.turno === nick;
+            
+            const item = document.createElement('div');
+            item.className = `jogador-item ${isVezDele ? 'vez-dele' : ''}`;
+            item.innerHTML = `
+                <span>${nick === meuNick ? 'Você' : nick}</span>
+                <span class="badge-cartas">${qtdCartas} 🗂️</span>
+            `;
+            listaDiv.appendChild(item);
+        });
+    }
+
     // Distribuir cartas iniciais
     if (!dados.jogadores[meuNick].mao || dados.jogadores[meuNick].mao.length === 0) {
         let novaMao = [];
@@ -100,14 +118,12 @@ async function jogarCarta(carta, index, dados) {
     if (dados.turno !== meuNick) return;
     const acumulado = dados.acumulado || 0;
 
-    // Regras de bloqueio por acumulado (+2)
     if (acumulado > 0 && carta.valor !== 'draw2') return alert("Você precisa comprar as cartas acumuladas ou jogar um +2!");
     if (acumulado === 0 && carta.cor !== dados.cartaNaMesa.cor && carta.valor !== dados.cartaNaMesa.valor) return alert("Essa carta não pode ser jogada agora!");
 
     let novaMao = [...dados.jogadores[meuNick].mao];
     novaMao.splice(index, 1);
     
-    // Verificar vitória
     if (novaMao.length === 0) {
         await update(ref(db, `salas/${salaID}`), { vencedor: meuNick });
         return;
@@ -118,7 +134,6 @@ async function jogarCarta(carta, index, dados) {
     let novoAcumulado = acumulado;
     let proximo;
 
-    // Lógica das cartas especiais
     if (carta.valor === 'draw2') { 
         novoAcumulado += 2; 
         proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); 
@@ -142,10 +157,8 @@ async function jogarCarta(carta, index, dados) {
     updates[`salas/${salaID}/acumulado`] = novoAcumulado;
     updates[`salas/${salaID}/comprouNaVez`] = false;
 
-    // PUNIÇÃO: Esqueceu de gritar UNO
     if (novaMao.length === 1 && !apertouUno) {
         updates[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`] = true;
-        // O jogador tem 5 segundos de janela para ser denunciado
         setTimeout(() => {
             update(ref(db), {[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`]: false});
         }, 5000);
@@ -155,13 +168,11 @@ async function jogarCarta(carta, index, dados) {
     await update(ref(db), updates);
 }
 
-// BOTÃO UNO
 document.getElementById('btnUno').onclick = () => { 
     apertouUno = true; 
     alert("Você gritou UNO!"); 
 };
 
-// BOTÃO DESAFIAR (DENUNCIAR QUEM NÃO FALOU UNO)
 document.getElementById('btnDenunciar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
@@ -172,7 +183,6 @@ document.getElementById('btnDenunciar').onclick = async () => {
 
     if (vitima) {
         let maoVitima = d.jogadores[vitima].mao || [];
-        // Jogador desafiado compra 2 cartas
         maoVitima.push(gerarCarta());
         maoVitima.push(gerarCarta());
 
@@ -185,7 +195,6 @@ document.getElementById('btnDenunciar').onclick = async () => {
     }
 };
 
-// BOTÃO COMPRAR
 document.getElementById('btnComprar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
@@ -208,7 +217,6 @@ document.getElementById('btnComprar').onclick = async () => {
     await update(ref(db), ups);
 };
 
-// BOTÃO REINICIAR (TELA DE VITÓRIA)
 document.getElementById('btnReiniciar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
@@ -222,11 +230,9 @@ document.getElementById('btnReiniciar').onclick = async () => {
     await update(ref(db, `salas/${salaID}`), updates);
 };
 
-// NAVEGAÇÃO
 document.getElementById('btnVoltarLobby').onclick = () => window.location.href = "index.html";
 document.getElementById('btnSair').onclick = () => window.location.href = "index.html";
 
-// BOTÃO PASSAR VEZ (SÓ APARECE APÓS COMPRAR)
 document.getElementById('btnPassar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
