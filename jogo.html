@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>UNO Arena - Em Partida</title>
     <style>
-        * { box-sizing: border-box; }
-
         body {
             background: radial-gradient(circle, #2c3e50 0%, #000000 100%);
             color: white;
@@ -46,39 +44,33 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 20px;
-            padding-bottom: 180px; 
+            gap: 15px;
+            padding-bottom: 160px; 
         }
 
         #txtVez {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             text-align: center;
             text-shadow: 0 0 10px rgba(0,0,0,1);
-            min-height: 50px;
+            min-height: 45px;
         }
 
         .mesa-display {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 30px;
-            width: 100%;
+            gap: 20px;
+        }
+
+        #cartaMesa img {
+            width: 110px;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
         }
 
         .botoes-acao {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 12px;
-            min-width: 140px;
-        }
-
-        #cartaMesa img {
-            width: 110px;
-            height: 160px;
-            object-fit: contain;
-            filter: drop-shadow(0 0 15px rgba(0,0,0,0.7));
-            border-radius: 12px;
+            gap: 10px;
         }
 
         #btnComprar {
@@ -91,12 +83,12 @@
 
         #btnComprar img {
             width: 85px;
-            border: 2px solid white;
             border-radius: 8px;
+            border: 2px solid white;
         }
 
         .btn-extra {
-            padding: 12px;
+            padding: 10px 15px;
             border-radius: 8px;
             border: 2px solid white;
             font-weight: bold;
@@ -104,11 +96,12 @@
             display: none; 
             width: 130px;
             text-align: center;
+            font-size: 14px;
         }
 
-        #btnUno { background: #ff9800; }
-        #btnPassar { background: #607d8b; }
-        #btnDenunciar { background: #f44336; animation: pulse 1s infinite; }
+        #btnUno { background: #ff9800; color: white; }
+        #btnPassar { background: #607d8b; color: white; }
+        #btnDenunciar { background: #f44336; color: white; animation: pulse 1s infinite; }
 
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -122,7 +115,7 @@
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95);
             z-index: 1000;
-            display: none; /* Escondido por padrão */
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -130,73 +123,73 @@
         }
 
         #telaVitoria h1 {
-            font-size: 3rem;
-            color: #ffeb3b;
-            margin-bottom: 10px;
+            font-size: 3rem; color: #ffeb3b; margin-bottom: 10px;
             text-shadow: 0 0 20px rgba(255, 235, 59, 0.5);
         }
 
         .btn-vitoria {
-            margin: 10px;
-            padding: 15px 30px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            width: 250px;
+            margin: 10px; padding: 15px 30px; font-size: 1.1rem; font-weight: bold;
+            border: none; border-radius: 50px; cursor: pointer; width: 250px;
         }
-
         .btn-reiniciar { background: #4caf50; color: white; }
         .btn-voltar { background: #2196f3; color: white; }
 
-        /* MÃO DO JOGADOR */
+        /* --- ÁREA DA MÃO (Restaurada ao estilo anterior) --- */
         .mao-container {
             background: rgba(0,0,0,0.85);
             width: 100%;
-            height: 160px;
+            padding: 25px 0 45px 0; /* Padding define a altura */
             position: fixed;
             bottom: 0;
             border-top: 3px solid rgba(255,255,255,0.1);
             z-index: 100;
             overflow-x: auto;
-            display: flex;
-            align-items: center;
+            overflow-y: visible;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
         }
 
+        .mao-container::-webkit-scrollbar { display: none; }
+
         #minhaMao {
-            display: flex;
-            padding: 0 50px;
-            align-items: flex-end;
-            height: 100%;
+            display: inline-flex;
+            padding: 0 60px;
+            align-items: center;
+            min-width: 100%;
         }
 
         .carta-slot {
-            margin-left: -40px;
-            transition: transform 0.2s;
+            display: inline-block;
+            transition: transform 0.2s ease;
             cursor: pointer;
+            position: relative;
+            margin-left: -35px;
+            flex-shrink: 0;
         }
 
         .carta-slot:first-child { margin-left: 0; }
 
         .carta-slot img {
-            width: 90px;
-            height: 130px;
-            border: 2px solid white;
+            width: 95px;
+            height: auto; /* Altura automática para não distorcer */
+            border: 1.5px solid white;
             border-radius: 10px;
-            box-shadow: -5px 0 10px rgba(0,0,0,0.5);
+            box-shadow: -4px 0 10px rgba(0,0,0,0.6);
+            pointer-events: none;
         }
 
-        .carta-slot:hover { transform: translateY(-30px); z-index: 100; }
+        .carta-slot:active {
+            transform: translateY(-20px) scale(1.05);
+            z-index: 999 !important;
+        }
     </style>
 </head>
 <body>
 
     <div id="telaVitoria">
-        <h1 id="txtVencedor">JOGADOR VENCEU!</h1>
-        <p style="font-size: 1.2rem;">O jogo acabou.</p>
-        <button class="btn-vitoria btn-reiniciar" id="btnReiniciar">NOVA PARTIDA</button>
-        <button class="btn-vitoria btn-voltar" id="btnVoltarLobby">SAIR DO JOGO</button>
+        <h1 id="txtVencedor">VENCEU!</h1>
+        <button class="btn-vitoria btn-reiniciar" id="btnReiniciar">JOGAR NOVAMENTE</button>
+        <button class="btn-vitoria btn-voltar" id="btnVoltarLobby">SAIR</button>
     </div>
 
     <div class="topo">
@@ -205,16 +198,16 @@
     </div>
 
     <div class="area-central">
-        <div id="txtVez">Aguardando...</div>
+        <div id="txtVez">Aguardando jogadores...</div>
         
         <div class="mesa-display">
             <div class="botoes-acao">
                 <div id="btnUno" class="btn-extra">UNO!</div>
                 <div id="btnDenunciar" class="btn-extra">DESAFIAR</div>
-                <button id="btnComprar">
+                <div id="btnComprar">
                     <img src="cartas/jota.png">
                     <div style="margin-top: 5px; font-size: 11px; font-weight: bold;">COMPRAR</div>
-                </button>
+                </div>
                 <div id="btnPassar" class="btn-extra">PASSAR VEZ</div>
             </div>
             <div id="cartaMesa"></div>
