@@ -44,7 +44,7 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     // LÓGICA DE VITÓRIA
     if (dados.vencedor) {
         document.getElementById('telaVitoria').style.display = 'flex';
-        document.getElementById('txtVencedor').innerText = dados.vencedor === meuNick ? "VOCÊ VENCEU! 🎉" : `${dados.vencedor} VENCEU!`;
+        document.getElementById('txtVencedor').innerText = dados.vencedor === meuNick ? "VOCÊ VENCEU!" : `${dados.vencedor} VENCEU!`;
         return;
     } else {
         document.getElementById('telaVitoria').style.display = 'none';
