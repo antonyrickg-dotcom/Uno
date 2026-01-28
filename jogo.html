@@ -66,7 +66,6 @@
             filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
         }
 
-        /* --- ÁREA DE BOTÕES AJUSTADA --- */
         .botoes-acao {
             display: flex;
             flex-direction: column;
@@ -88,18 +87,16 @@
             border: 2px solid white;
         }
 
-        /* ESTILO DOS BOTÕES EXTRAS */
         .btn-extra {
             padding: 10px 15px;
             border-radius: 8px;
             border: 2px solid white;
             font-weight: bold;
             cursor: pointer;
-            display: none; /* Escondidos por padrão, o JS mostra */
-            width: 120px;
+            display: none; 
+            width: 130px;
             text-align: center;
             font-size: 14px;
-            transition: 0.2s;
         }
 
         #btnUno { background: #ff9800; }
@@ -112,7 +109,6 @@
             100% { transform: scale(1); }
         }
 
-        /* --- RODAPÉ COM ARRASTE --- */
         .mao-container {
             background: rgba(0,0,0,0.85);
             width: 100%;
@@ -170,22 +166,18 @@
     </div>
 
     <div class="area-central">
-        <div id="txtVez">Aguardando...</div>
+        <div id="txtVez">Carregando partida...</div>
         
         <div class="mesa-display">
             <div class="botoes-acao">
                 <div id="btnUno" class="btn-extra">UNO!</div>
-                
                 <div id="btnDenunciar" class="btn-extra">DESAFIAR</div>
-                
                 <div id="btnComprar">
                     <img src="cartas/jota.png">
                     <div style="margin-top: 5px; font-size: 11px; font-weight: bold;">COMPRAR</div>
                 </div>
-
-                <div id="btnPassar" class="btn-extra">PASSAR</div>
+                <div id="btnPassar" class="btn-extra">PASSAR VEZ</div>
             </div>
-            
             <div id="cartaMesa"></div>
         </div>
     </div>
