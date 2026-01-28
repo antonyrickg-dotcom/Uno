@@ -52,7 +52,7 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
 
     const nicks = Object.keys(dados.jogadores);
     
-    // Distribuir cartas iniciais (7 para cada)
+    // Distribuir cartas iniciais
     if (!dados.jogadores[meuNick].mao || dados.jogadores[meuNick].mao.length === 0) {
         let novaMao = [];
         for (let i = 0; i < 7; i++) novaMao.push(gerarCarta());
@@ -69,21 +69,22 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     const isMinhaVez = dados.turno === meuNick;
     const mao = dados.jogadores[meuNick].mao || [];
     
-    // Interface
+    // Interface de Botões
     document.getElementById('btnUno').style.display = (isMinhaVez && mao.length === 2) ? 'block' : 'none';
     document.getElementById('btnPassar').style.display = (isMinhaVez && dados.comprouNaVez && (dados.acumulado || 0) === 0) ? 'block' : 'none';
     
+    // Lógica do botão Desafiar (Denunciar)
     const vitima = nicks.find(n => dados.jogadores[n].esqueceuUno === true);
     document.getElementById('btnDenunciar').style.display = (vitima && vitima !== meuNick) ? 'block' : 'none';
 
-    // Status
+    // Status do Turno
     const seta = (dados.sentido || 1) === 1 ? "➡" : "⬅";
     document.getElementById('txtVez').innerHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ! ${seta}</b>` : `Vez de ${dados.turno} ${seta}`;
 
-    // Mesa
+    // Atualizar Mesa
     if (dados.cartaNaMesa) document.getElementById('cartaMesa').innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
 
-    // Mão
+    // Renderizar Mão
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
     mao.forEach((c, i) => {
@@ -99,13 +100,14 @@ async function jogarCarta(carta, index, dados) {
     if (dados.turno !== meuNick) return;
     const acumulado = dados.acumulado || 0;
 
-    if (acumulado > 0 && carta.valor !== 'draw2') return alert("Compre as cartas!");
-    if (acumulado === 0 && carta.cor !== dados.cartaNaMesa.cor && carta.valor !== dados.cartaNaMesa.valor) return alert("Carta inválida!");
+    // Regras de bloqueio por acumulado (+2)
+    if (acumulado > 0 && carta.valor !== 'draw2') return alert("Você precisa comprar as cartas acumuladas ou jogar um +2!");
+    if (acumulado === 0 && carta.cor !== dados.cartaNaMesa.cor && carta.valor !== dados.cartaNaMesa.valor) return alert("Essa carta não pode ser jogada agora!");
 
     let novaMao = [...dados.jogadores[meuNick].mao];
     novaMao.splice(index, 1);
     
-    // VERIFICA SE VENCEU
+    // Verificar vitória
     if (novaMao.length === 0) {
         await update(ref(db, `salas/${salaID}`), { vencedor: meuNick });
         return;
@@ -116,10 +118,21 @@ async function jogarCarta(carta, index, dados) {
     let novoAcumulado = acumulado;
     let proximo;
 
-    if (carta.valor === 'draw2') { novoAcumulado += 2; proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); }
-    else if (carta.valor === 'reverse') { sentido *= -1; proximo = (nicks.length === 2) ? nicks.indexOf(meuNick) : calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); }
-    else if (carta.valor === 'skip') { proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 2); }
-    else { proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); }
+    // Lógica das cartas especiais
+    if (carta.valor === 'draw2') { 
+        novoAcumulado += 2; 
+        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); 
+    }
+    else if (carta.valor === 'reverse') { 
+        sentido *= -1; 
+        proximo = (nicks.length === 2) ? nicks.indexOf(meuNick) : calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); 
+    }
+    else if (carta.valor === 'skip') { 
+        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 2); 
+    }
+    else { 
+        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); 
+    }
 
     const updates = {};
     updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = novaMao;
@@ -129,24 +142,60 @@ async function jogarCarta(carta, index, dados) {
     updates[`salas/${salaID}/acumulado`] = novoAcumulado;
     updates[`salas/${salaID}/comprouNaVez`] = false;
 
+    // PUNIÇÃO: Esqueceu de gritar UNO
     if (novaMao.length === 1 && !apertouUno) {
         updates[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`] = true;
-        setTimeout(() => update(ref(db), {[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`]: false}), 5000);
+        // O jogador tem 5 segundos de janela para ser denunciado
+        setTimeout(() => {
+            update(ref(db), {[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`]: false});
+        }, 5000);
     }
+
     apertouUno = false;
     await update(ref(db), updates);
 }
 
-// BOTOES DE AÇÃO
-document.getElementById('btnUno').onclick = () => { apertouUno = true; alert("UNO!"); };
+// BOTÃO UNO
+document.getElementById('btnUno').onclick = () => { 
+    apertouUno = true; 
+    alert("Você gritou UNO!"); 
+};
+
+// BOTÃO DESAFIAR (DENUNCIAR QUEM NÃO FALOU UNO)
+document.getElementById('btnDenunciar').onclick = async () => {
+    const snap = await get(ref(db, `salas/${salaID}`));
+    const d = snap.val();
+    if (!d || !d.jogadores) return;
+
+    const nicks = Object.keys(d.jogadores);
+    const vitima = nicks.find(n => d.jogadores[n].esqueceuUno === true);
+
+    if (vitima) {
+        let maoVitima = d.jogadores[vitima].mao || [];
+        // Jogador desafiado compra 2 cartas
+        maoVitima.push(gerarCarta());
+        maoVitima.push(gerarCarta());
+
+        const ups = {};
+        ups[`salas/${salaID}/jogadores/${vitima}/mao`] = maoVitima;
+        ups[`salas/${salaID}/jogadores/${vitima}/esqueceuUno`] = false;
+
+        await update(ref(db), ups);
+        alert(`Pego! ${vitima} esqueceu de falar UNO e comprou 2 cartas!`);
+    }
+};
+
+// BOTÃO COMPRAR
 document.getElementById('btnComprar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
     if (d.turno !== meuNick || d.comprouNaVez) return;
+    
     let m = d.jogadores[meuNick].mao || [];
     const ups = {};
+    
     if (d.acumulado > 0) {
-        for(let i=0; i<d.acumulado; i++) m.push(gerarCarta());
+        for(let i=0; i < d.acumulado; i++) m.push(gerarCarta());
         ups[`salas/${salaID}/acumulado`] = 0;
         const nicks = Object.keys(d.jogadores);
         ups[`salas/${salaID}/turno`] = nicks[calcProx(nicks.indexOf(meuNick), nicks.length, d.sentido || 1, 1)];
@@ -154,25 +203,37 @@ document.getElementById('btnComprar').onclick = async () => {
         m.push(gerarCarta());
         ups[`salas/${salaID}/comprouNaVez`] = true;
     }
+    
     ups[`salas/${salaID}/jogadores/${meuNick}/mao`] = m;
     await update(ref(db), ups);
 };
 
-// BOTÕES DA TELA DE VITÓRIA
+// BOTÃO REINICIAR (TELA DE VITÓRIA)
 document.getElementById('btnReiniciar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
     const updates = { vencedor: null, turno: null, acumulado: 0, comprouNaVez: false };
-    Object.keys(d.jogadores).forEach(nick => { updates[`jogadores/${nick}/mao`] = []; updates[`jogadores/${nick}/esqueceuUno`] = false; });
+    
+    Object.keys(d.jogadores).forEach(nick => { 
+        updates[`jogadores/${nick}/mao`] = []; 
+        updates[`jogadores/${nick}/esqueceuUno`] = false; 
+    });
+    
     await update(ref(db, `salas/${salaID}`), updates);
 };
 
+// NAVEGAÇÃO
 document.getElementById('btnVoltarLobby').onclick = () => window.location.href = "index.html";
 document.getElementById('btnSair').onclick = () => window.location.href = "index.html";
+
+// BOTÃO PASSAR VEZ (SÓ APARECE APÓS COMPRAR)
 document.getElementById('btnPassar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
     const nicks = Object.keys(d.jogadores);
     const prox = nicks[calcProx(nicks.indexOf(meuNick), nicks.length, d.sentido || 1, 1)];
-    await update(ref(db), { [`salas/${salaID}/turno`] : prox, [`salas/${salaID}/comprouNaVez`]: false });
+    await update(ref(db), { 
+        [`salas/${salaID}/turno`] : prox, 
+        [`salas/${salaID}/comprouNaVez`]: false 
+    });
 };
