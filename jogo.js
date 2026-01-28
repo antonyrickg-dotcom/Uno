@@ -23,27 +23,21 @@ let indicePendente = null;
 if (!salaID || !meuNick) window.location.href = "index.html";
 document.getElementById('txtSalaID').innerText = salaID;
 
+// --- FUNÇÕES DE JOGO ---
+
 function gerarCarta() {
     const cores = ['red', 'blue', 'green', 'yellow'];
     const valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'draw2'];
-    
-    // 15% de chance de vir um Curinga
     if (Math.random() < 0.15) {
         const curingas = ['wild', 'wild_draw4'];
         return { cor: 'black', valor: curingas[Math.floor(Math.random() * curingas.length)] };
     }
-
-    return { 
-        cor: cores[Math.floor(Math.random() * cores.length)], 
-        valor: valores[Math.floor(Math.random() * valores.length)] 
-    };
+    return { cor: cores[Math.floor(Math.random() * cores.length)], valor: valores[Math.floor(Math.random() * valores.length)] };
 }
 
 function getNomeImagem(c) {
     if (c.cor === 'black') return `cartas/${c.valor}.png`;
-    // Se a carta for um curinga que já teve a cor escolhida (originalCor salva que era preto)
     if (c.originalCor === 'black') return `cartas/${c.valor}_${c.cor}.png`;
-    
     const esp = ['skip', 'reverse', 'draw2'];
     return esp.includes(c.valor) ? `cartas/${c.valor}_${c.cor}.png` : `cartas/${c.cor}_${c.valor}.png`;
 }
@@ -52,41 +46,43 @@ function calcProx(atual, total, sentido, pulos = 1) {
     return (((atual + (sentido * pulos)) % total) + total) % total;
 }
 
-// ESCUTAR MUDANÇAS NO JOGO
+// --- ESCUTAR FIREBASE (JOGO E CHAT) ---
+
 onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     const dados = snapshot.val();
     if (!dados || !dados.jogadores) return;
+
+    // Atualizar Chat
+    const chatDiv = document.getElementById('mensagensChat');
+    if (dados.chat) {
+        chatDiv.innerHTML = dados.chat.map(m => `<div class="msg-item"><b>${m.nick}:</b> ${m.msg}</div>`).join('');
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
 
     if (dados.vencedor) {
         document.getElementById('telaVitoria').style.display = 'flex';
         document.getElementById('txtVencedor').innerText = dados.vencedor === meuNick ? "VOCÊ VENCEU!" : `${dados.vencedor} VENCEU!`;
         return;
-    } else {
-        document.getElementById('telaVitoria').style.display = 'none';
     }
 
     const nicks = Object.keys(dados.jogadores);
     
+    // Lista Jogadores
     const listaDiv = document.getElementById('listaJogadores');
-    if (listaDiv) {
-        listaDiv.innerHTML = "";
-        nicks.forEach(nick => {
-            const qtdCartas = dados.jogadores[nick].mao ? dados.jogadores[nick].mao.length : 0;
-            const isVezDele = dados.turno === nick;
-            const item = document.createElement('div');
-            item.className = `jogador-item ${isVezDele ? 'vez-dele' : ''}`;
-            item.innerHTML = `<span>${nick === meuNick ? 'Você' : nick}</span><span class="badge-cartas">${qtdCartas} 🗂️</span>`;
-            listaDiv.appendChild(item);
-        });
-    }
+    listaDiv.innerHTML = nicks.map(nick => {
+        const qtd = dados.jogadores[nick].mao ? dados.jogadores[nick].mao.length : 0;
+        const vez = dados.turno === nick ? 'vez-dele' : '';
+        return `<div class="jogador-item ${vez}"><span>${nick === meuNick ? 'Você' : nick}</span><span class="badge-cartas">${qtd} 🗂️</span></div>`;
+    }).join('');
 
-    if (!dados.jogadores[meuNick].mao || dados.jogadores[meuNick].mao.length === 0) {
-        let novaMao = [];
-        for (let i = 0; i < 7; i++) novaMao.push(gerarCarta());
+    // Cartas Iniciais
+    if (!dados.jogadores[meuNick].mao) {
+        let novaMao = Array.from({length: 7}, gerarCarta);
         await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: novaMao });
         return;
     }
 
+    // Iniciar Turno
     if (!dados.turno && meuNick === nicks[0]) {
         await update(ref(db, `salas/${salaID}`), { turno: nicks[0], cartaNaMesa: gerarCarta(), sentido: 1, acumulado: 0 });
         return;
@@ -101,11 +97,10 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     const vitima = nicks.find(n => dados.jogadores[n].esqueceuUno === true);
     document.getElementById('btnDenunciar').style.display = (vitima && vitima !== meuNick) ? 'block' : 'none';
 
-    const seta = (dados.sentido || 1) === 1 ? "➡" : "⬅";
-    document.getElementById('txtVez').innerHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ! ${seta}</b>` : `Vez de ${dados.turno} ${seta}`;
-
+    document.getElementById('txtVez').innerHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ!</b>` : `Vez de ${dados.turno}`;
     if (dados.cartaNaMesa) document.getElementById('cartaMesa').innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
 
+    // Renderizar Mão
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
     mao.forEach((c, i) => {
@@ -117,137 +112,137 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     });
 });
 
-// FUNÇÃO PARA ABRIR MODAL SE FOR CURINGA
+// --- LÓGICA DE JOGADAS E CURINGA ---
+
 function preVerificarJogada(carta, index, dados) {
     if (dados.turno !== meuNick) return;
-
-    // Se for curinga (preto), abre o modal antes de processar
     if (carta.cor === 'black') {
-        cartaPendente = carta;
-        indicePendente = index;
+        cartaPendente = carta; indicePendente = index;
         document.getElementById('modalCores').style.display = 'flex';
         return;
     }
-
-    // Se for carta normal, segue o fluxo
     processarJogada(carta, index, dados);
 }
 
-// FUNÇÃO CHAMADA PELO HTML (MODAL)
-window.escolherNovaCor = async (corEscolhida) => {
+window.escolherNovaCor = async (cor) => {
     document.getElementById('modalCores').style.display = 'none';
     const snap = await get(ref(db, `salas/${salaID}`));
-    const dados = snap.val();
-
     if (cartaPendente) {
-        const cartaComCor = { 
-            ...cartaPendente, 
-            cor: corEscolhida, 
-            originalCor: 'black' 
-        };
-        processarJogada(cartaComCor, indicePendente, dados);
+        const cartaComCor = { ...cartaPendente, cor: cor, originalCor: 'black' };
+        processarJogada(cartaComCor, indicePendente, snap.val());
         cartaPendente = null;
-        indicePendente = null;
     }
 };
 
 async function processarJogada(carta, index, dados) {
     const acumulado = dados.acumulado || 0;
-
-    // Validação de regras (Curingas ignoram cor na mesa ao serem lançados)
     if (carta.originalCor !== 'black') {
-        if (acumulado > 0 && carta.valor !== 'draw2') return alert("Compre as cartas ou jogue +2!");
-        if (acumulado === 0 && carta.cor !== dados.cartaNaMesa.cor && carta.valor !== dados.cartaNaMesa.valor) return alert("Carta inválida!");
+        if (acumulado > 0 && carta.valor !== 'draw2') return alert("Compre ou jogue +2!");
+        if (acumulado === 0 && carta.cor !== dados.cartaNaMesa.cor && carta.valor !== dados.cartaNaMesa.valor) return alert("Inválida!");
     }
 
     let novaMao = [...dados.jogadores[meuNick].mao];
     novaMao.splice(index, 1);
     
-    if (novaMao.length === 0) {
-        await update(ref(db, `salas/${salaID}`), { vencedor: meuNick });
-        return;
-    }
+    if (novaMao.length === 0) return await update(ref(db, `salas/${salaID}`), { vencedor: meuNick });
 
     const nicks = Object.keys(dados.jogadores);
     let sentido = dados.sentido || 1;
-    let novoAcumulado = acumulado;
+    let novoAcumulado = (carta.valor === 'draw2') ? acumulado + 2 : (carta.valor === 'wild_draw4' ? acumulado + 4 : acumulado);
+    
     let proximo;
+    if (carta.valor === 'skip') proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 2);
+    else if (carta.valor === 'reverse') {
+        sentido *= -1;
+        proximo = (nicks.length === 2) ? nicks.indexOf(meuNick) : calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1);
+    } else proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1);
 
-    if (carta.valor === 'draw2') { 
-        novoAcumulado += 2; 
-        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); 
-    }
-    else if (carta.valor === 'wild_draw4') {
-        novoAcumulado += 4;
-        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1);
-    }
-    else if (carta.valor === 'reverse') { 
-        sentido *= -1; 
-        proximo = (nicks.length === 2) ? nicks.indexOf(meuNick) : calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); 
-    }
-    else if (carta.valor === 'skip') { 
-        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 2); 
-    }
-    else { 
-        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1); 
-    }
-
-    const updates = {};
-    updates[`salas/${salaID}/jogadores/${meuNick}/mao`] = novaMao;
-    updates[`salas/${salaID}/cartaNaMesa`] = carta;
-    updates[`salas/${salaID}/turno`] = nicks[proximo];
-    updates[`salas/${salaID}/sentido`] = sentido;
-    updates[`salas/${salaID}/acumulado`] = novoAcumulado;
-    updates[`salas/${salaID}/comprouNaVez`] = false;
-
-    if (novaMao.length === 1 && !apertouUno) {
-        updates[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`] = true;
-        setTimeout(() => {
-            update(ref(db), {[`salas/${salaID}/jogadores/${meuNick}/esqueceuUno`]: false});
-        }, 5000);
-    }
-
-    apertouUno = false;
-    await update(ref(db), updates);
+    await update(ref(db, `salas/${salaID}`), {
+        [`jogadores/${meuNick}/mao`]: novaMao,
+        cartaNaMesa: carta,
+        turno: nicks[proximo],
+        sentido: sentido,
+        acumulado: novoAcumulado,
+        comprouNaVez: false
+    });
 }
 
-// BOTOES E ACOES RESTANTES
-document.getElementById('btnUno').onclick = () => { apertouUno = true; alert("UNO!"); };
+// --- LÓGICA DO CHAT (PC E CELULAR) ---
 
-document.getElementById('btnDenunciar').onclick = async () => {
-    const snap = await get(ref(db, `salas/${salaID}`));
-    const d = snap.val();
-    const vitima = Object.keys(d.jogadores).find(n => d.jogadores[n].esqueceuUno === true);
-    if (vitima) {
-        let mV = d.jogadores[vitima].mao || [];
-        mV.push(gerarCarta()); mV.push(gerarCarta());
-        await update(ref(db), { [`salas/${salaID}/jogadores/${vitima}/mao`]: mV, [`salas/${salaID}/jogadores/${vitima}/esqueceuUno`]: false });
+const containerChat = document.getElementById('containerChat');
+const headerChat = document.getElementById('headerChat');
+const campoMsg = document.getElementById('campoMsg');
+const btnAbrirChat = document.getElementById('btnAbrirChat');
+
+// Abrir/Fechar no Celular
+btnAbrirChat.onclick = () => containerChat.classList.toggle('aberto');
+
+// Enviar Mensagem (Enter no PC)
+campoMsg.onkeydown = async (e) => {
+    if (e.key === 'Enter') {
+        const txt = campoMsg.value.trim();
+        if (!txt) return;
+        const chatRef = ref(db, `salas/${salaID}/chat`);
+        const snap = await get(chatRef);
+        let msgs = snap.val() || [];
+        if (msgs.length > 25) msgs.shift();
+        msgs.push({ nick: meuNick, msg: txt });
+        await set(chatRef, msgs);
+        campoMsg.value = "";
     }
 };
 
+// --- ARRASTAR CHAT (MOUSE E TOUCH) ---
+let isDragging = false;
+let startX, startY, initialX, initialY;
+
+const startMove = (e) => {
+    isDragging = true;
+    const pos = e.type.includes('touch') ? e.touches[0] : e;
+    startX = pos.clientX;
+    startY = pos.clientY;
+    initialX = containerChat.offsetLeft;
+    initialY = containerChat.offsetTop;
+    containerChat.style.transition = 'none';
+};
+
+const doMove = (e) => {
+    if (!isDragging) return;
+    const pos = e.type.includes('touch') ? e.touches[0] : e;
+    const dx = pos.clientX - startX;
+    const dy = pos.clientY - startY;
+    containerChat.style.left = (initialX + dx) + 'px';
+    containerChat.style.top = (initialY + dy) + 'px';
+    containerChat.style.right = 'auto';
+    containerChat.style.bottom = 'auto';
+};
+
+headerChat.addEventListener('mousedown', startMove);
+headerChat.addEventListener('touchstart', startMove, {passive: true});
+window.addEventListener('mousemove', doMove);
+window.addEventListener('touchmove', doMove, {passive: false});
+window.addEventListener('mouseup', () => isDragging = false);
+window.addEventListener('touchend', () => isDragging = false);
+
+// --- OUTROS BOTÕES ---
 document.getElementById('btnComprar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
     if (d.turno !== meuNick || d.comprouNaVez) return;
     let m = d.jogadores[meuNick].mao || [];
-    const ups = {};
     if (d.acumulado > 0) {
-        for(let i=0; i < d.acumulado; i++) m.push(gerarCarta());
-        ups[`salas/${salaID}/acumulado`] = 0;
-        ups[`salas/${salaID}/turno`] = Object.keys(d.jogadores)[calcProx(Object.keys(d.jogadores).indexOf(meuNick), Object.keys(d.jogadores).length, d.sentido || 1, 1)];
+        for(let i=0; i<d.acumulado; i++) m.push(gerarCarta());
+        await update(ref(db, `salas/${salaID}`), { [`jogadores/${meuNick}/mao`]: m, acumulado: 0, turno: Object.keys(d.jogadores)[calcProx(Object.keys(d.jogadores).indexOf(meuNick), Object.keys(d.jogadores).length, d.sentido, 1)] });
     } else {
         m.push(gerarCarta());
-        ups[`salas/${salaID}/comprouNaVez`] = true;
+        await update(ref(db, `salas/${salaID}`), { [`jogadores/${meuNick}/mao`]: m, comprouNaVez: true });
     }
-    ups[`salas/${salaID}/jogadores/${meuNick}/mao`] = m;
-    await update(ref(db), ups);
 };
 
 document.getElementById('btnPassar').onclick = async () => {
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
-    const prox = Object.keys(d.jogadores)[calcProx(Object.keys(d.jogadores).indexOf(meuNick), Object.keys(d.jogadores).length, d.sentido || 1, 1)];
-    await update(ref(db), { [`salas/${salaID}/turno`] : prox, [`salas/${salaID}/comprouNaVez`]: false });
+    await update(ref(db, `salas/${salaID}`), { turno: Object.keys(d.jogadores)[calcProx(Object.keys(d.jogadores).indexOf(meuNick), Object.keys(d.jogadores).length, d.sentido, 1)], comprouNaVez: false });
 };
 
 document.getElementById('btnSair').onclick = () => window.location.href = "index.html";
