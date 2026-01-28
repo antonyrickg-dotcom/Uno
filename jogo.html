@@ -67,20 +67,31 @@
             font-size: 11px;
         }
 
-        /* --- SISTEMA DE CHAT --- */
+        /* --- SISTEMA DE CHAT ATUALIZADO (ARRASTÁVEL) --- */
         #containerChat {
             position: fixed;
             right: 15px;
             bottom: 180px;
             width: 260px;
             height: 250px;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             border: 2px solid #444;
             border-radius: 12px;
             display: flex;
             flex-direction: column;
             z-index: 1000;
-            transition: transform 0.3s ease, opacity 0.3s ease;
+            touch-action: none; /* Necessário para arraste suave */
+        }
+
+        #headerChat {
+            background: #333;
+            padding: 8px;
+            text-align: center;
+            font-size: 10px;
+            cursor: move;
+            border-radius: 10px 10px 0 0;
+            user-select: none;
+            color: #aaa;
         }
 
         #mensagensChat {
@@ -115,7 +126,6 @@
         }
 
         #btnAbrirChat {
-            display: none; /* Escondido no PC */
             position: fixed;
             right: 15px;
             bottom: 160px;
@@ -129,25 +139,22 @@
             z-index: 1001;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             cursor: pointer;
+            display: none; /* Aparece via JS no mobile */
         }
 
-        /* Ajustes Mobile */
         @media (max-width: 768px) {
             #containerChat {
-                width: 85vw;
-                right: 7.5vw;
+                display: none; /* Escondido por padrão no mobile */
+                width: 230px;
+                height: 220px;
+                right: 10px;
                 bottom: 220px;
-                transform: scale(0);
-                opacity: 0;
-                transform-origin: bottom right;
             }
-            #containerChat.aberto {
-                transform: scale(1);
-                opacity: 1;
-            }
+            #containerChat.aberto { display: flex; }
             #btnAbrirChat { display: block; }
         }
 
+        /* --- RESTO DO JOGO --- */
         .area-central {
             flex: 1;
             display: flex;
@@ -193,15 +200,14 @@
         #minhaMao { display: inline-flex; padding: 0 60px; }
         .carta-slot { display: inline-block; margin-left: -35px; transition: 0.2s; }
         .carta-slot img { width: 95px; border: 1.5px solid white; border-radius: 10px; }
-        .carta-slot:active { transform: translateY(-20px); z-index: 99; }
     </style>
 </head>
 <body>
 
     <div id="telaVitoria">
         <h1 id="txtVencedor">VENCEU!</h1>
-        <button onclick="location.reload()" style="padding:15px; background:#4caf50; color:white; border-radius:10px; border:none; font-weight:bold;">JOGAR NOVAMENTE</button>
-        <button onclick="window.location.href='index.html'" style="margin-top:10px; padding:10px; background:#2196f3; color:white; border:none; border-radius:10px;">SAIR</button>
+        <button onclick="location.reload()" style="padding:15px; background:#4caf50; color:white; border-radius:10px; border:none; font-weight:bold; cursor:pointer;">JOGAR NOVAMENTE</button>
+        <button onclick="window.location.href='index.html'" style="margin-top:10px; padding:10px; background:#2196f3; color:white; border:none; border-radius:10px; cursor:pointer;">SAIR</button>
     </div>
 
     <div class="topo">
@@ -213,9 +219,10 @@
 
     <div id="btnAbrirChat">💬</div>
     <div id="containerChat">
+        <div id="headerChat">⠿ ARRASTAR CHAT</div>
         <div id="mensagensChat"></div>
         <div id="inputChatArea">
-            <input type="text" id="campoMsg" placeholder="Chat...">
+            <input type="text" id="campoMsg" placeholder="Chat..." autocomplete="off">
         </div>
     </div>
 
