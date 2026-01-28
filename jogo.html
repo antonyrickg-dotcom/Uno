@@ -66,6 +66,14 @@
             filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
         }
 
+        /* --- ÁREA DE BOTÕES AJUSTADA --- */
+        .botoes-acao {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
         #btnComprar {
             background: none;
             border: none;
@@ -80,7 +88,21 @@
             border: 2px solid white;
         }
 
-        /* --- NOVO RODAPÉ COM ARRASTE (SCROLL) --- */
+        .btn-extra {
+            padding: 8px 15px;
+            border-radius: 5px;
+            border: 2px solid white;
+            font-weight: bold;
+            cursor: pointer;
+            display: none; /* Escondidos por padrão */
+            width: 100%;
+            text-align: center;
+        }
+
+        #btnUno { background: #ff9800; }
+        #btnPassar { background: #607d8b; }
+
+        /* --- RODAPÉ COM ARRASTE --- */
         .mao-container {
             background: rgba(0,0,0,0.85);
             width: 100%;
@@ -89,22 +111,17 @@
             bottom: 0;
             border-top: 3px solid rgba(255,255,255,0.1);
             z-index: 100;
-
-            /* Habilita o scroll horizontal */
             overflow-x: auto;
             overflow-y: visible;
             white-space: nowrap;
-            -webkit-overflow-scrolling: touch; /* Suavidade no mobile */
+            -webkit-overflow-scrolling: touch;
         }
 
-        /* Esconde a barra de rolagem */
-        .mao-container::-webkit-scrollbar {
-            display: none;
-        }
+        .mao-container::-webkit-scrollbar { display: none; }
 
         #minhaMao {
             display: inline-flex;
-            padding: 0 60px; /* Respiro nas pontas */
+            padding: 0 60px;
             align-items: center;
             min-width: 100%;
         }
@@ -114,24 +131,21 @@
             transition: transform 0.2s ease;
             cursor: pointer;
             position: relative;
-            margin-left: -35px; /* Leve empilhamento */
+            margin-left: -35px;
             flex-shrink: 0;
         }
 
-        .carta-slot:first-child {
-            margin-left: 0;
-        }
+        .carta-slot:first-child { margin-left: 0; }
 
         .carta-slot img {
-            width: 95px; /* Tamanho fixo para não bugar no arraste */
+            width: 95px;
             height: auto;
             border: 1.5px solid white;
             border-radius: 10px;
             box-shadow: -4px 0 10px rgba(0,0,0,0.6);
-            pointer-events: none; /* Melhora o arraste no mobile */
+            pointer-events: none;
         }
 
-        /* Efeito ao tocar/passar mouse */
         .carta-slot:active {
             transform: translateY(-20px) scale(1.05);
             z-index: 999 !important;
@@ -149,10 +163,17 @@
         <div id="txtVez">Aguardando...</div>
         
         <div class="mesa-display">
-            <div id="btnComprar">
-                <img src="cartas/jota.png">
-                <div style="margin-top: 5px; font-size: 11px; font-weight: bold;">COMPRAR</div>
+            <div class="botoes-acao">
+                <div id="btnUno" class="btn-extra">UNO!</div>
+                
+                <div id="btnComprar">
+                    <img src="cartas/jota.png">
+                    <div style="margin-top: 5px; font-size: 11px; font-weight: bold;">COMPRAR</div>
+                </div>
+
+                <div id="btnPassar" class="btn-extra">PASSAR</div>
             </div>
+            
             <div id="cartaMesa"></div>
         </div>
     </div>
