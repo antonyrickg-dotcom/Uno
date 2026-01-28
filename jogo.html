@@ -38,7 +38,6 @@
             font-weight: bold;
         }
 
-        /* --- LISTA DE JOGADORES (Novo) --- */
         .lista-jogadores {
             position: fixed;
             top: 65px;
@@ -49,7 +48,6 @@
             border: 1px solid #555;
             z-index: 5;
             min-width: 130px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
         .jogador-item {
@@ -57,27 +55,97 @@
             margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            gap: 10px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 4px;
         }
 
-        .jogador-item:last-child { border: none; }
-
-        .jogador-item.vez-dele {
-            color: #4caf50;
-            text-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-        }
+        .jogador-item.vez-dele { color: #4caf50; text-shadow: 0 0 8px #4caf50; }
 
         .badge-cartas {
             background: #f44336;
-            color: white;
             padding: 2px 6px;
             border-radius: 4px;
-            font-weight: bold;
             font-size: 11px;
-            border: 1px solid white;
+        }
+
+        /* --- SISTEMA DE CHAT --- */
+        #containerChat {
+            position: fixed;
+            right: 15px;
+            bottom: 180px;
+            width: 260px;
+            height: 250px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #444;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        #mensagensChat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: sans-serif;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .msg-item { line-height: 1.4; border-bottom: 1px solid #222; padding-bottom: 2px; }
+        .msg-item b { color: #ffeb3b; }
+
+        #inputChatArea {
+            display: flex;
+            padding: 8px;
+            background: #111;
+            border-radius: 0 0 12px 12px;
+        }
+
+        #campoMsg {
+            flex: 1;
+            background: #222;
+            border: 1px solid #444;
+            color: white;
+            padding: 6px;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        #btnAbrirChat {
+            display: none; /* Escondido no PC */
+            position: fixed;
+            right: 15px;
+            bottom: 160px;
+            background: #2196f3;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 50px;
+            font-size: 24px;
+            z-index: 1001;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            cursor: pointer;
+        }
+
+        /* Ajustes Mobile */
+        @media (max-width: 768px) {
+            #containerChat {
+                width: 85vw;
+                right: 7.5vw;
+                bottom: 220px;
+                transform: scale(0);
+                opacity: 0;
+                transform-origin: bottom right;
+            }
+            #containerChat.aberto {
+                transform: scale(1);
+                opacity: 1;
+            }
+            #btnAbrirChat { display: block; }
         }
 
         .area-central {
@@ -90,146 +158,50 @@
             padding-bottom: 160px; 
         }
 
-        #txtVez {
-            font-size: 1.1rem;
-            text-align: center;
-            text-shadow: 0 0 10px rgba(0,0,0,1);
-            min-height: 45px;
-        }
+        #txtVez { font-size: 1.1rem; text-align: center; min-height: 45px; }
 
-        .mesa-display {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
+        .mesa-display { display: flex; align-items: center; gap: 20px; }
+        #cartaMesa img { width: 110px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
 
-        #cartaMesa img {
-            width: 110px;
-            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
-        }
-
-        .botoes-acao {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-
-        #btnComprar {
-            background: none;
-            border: none;
-            cursor: pointer;
-            text-align: center;
-            color: white;
-        }
-
-        #btnComprar img {
-            width: 85px;
-            border-radius: 8px;
-            border: 2px solid white;
-        }
+        .botoes-acao { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        #btnComprar { background: none; border: none; cursor: pointer; color: white; }
+        #btnComprar img { width: 85px; border-radius: 8px; border: 2px solid white; }
 
         .btn-extra {
-            padding: 10px 15px;
-            border-radius: 8px;
-            border: 2px solid white;
-            font-weight: bold;
-            cursor: pointer;
-            display: none; 
-            width: 130px;
-            text-align: center;
-            font-size: 14px;
+            padding: 10px 15px; border-radius: 8px; border: 2px solid white;
+            font-weight: bold; cursor: pointer; display: none; width: 130px; text-align: center;
         }
 
         #btnUno { background: #ff9800; color: white; }
         #btnPassar { background: #607d8b; color: white; }
         #btnDenunciar { background: #f44336; color: white; animation: pulse 1s infinite; }
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
         #telaVitoria {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 2000; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
         }
-
-        #telaVitoria h1 {
-            font-size: 3rem; color: #ffeb3b; margin-bottom: 10px;
-            text-shadow: 0 0 20px rgba(255, 235, 59, 0.5);
-        }
-
-        .btn-vitoria {
-            margin: 10px; padding: 15px 30px; font-size: 1.1rem; font-weight: bold;
-            border: none; border-radius: 50px; cursor: pointer; width: 250px;
-        }
-        .btn-reiniciar { background: #4caf50; color: white; }
-        .btn-voltar { background: #2196f3; color: white; }
 
         .mao-container {
-            background: rgba(0,0,0,0.85);
-            width: 100%;
-            padding: 25px 0 45px 0;
-            position: fixed;
-            bottom: 0;
-            border-top: 3px solid rgba(255,255,255,0.1);
-            z-index: 100;
-            overflow-x: auto;
-            overflow-y: visible;
-            white-space: nowrap;
-            -webkit-overflow-scrolling: touch;
+            background: rgba(0,0,0,0.85); width: 100%; padding: 25px 0 45px 0;
+            position: fixed; bottom: 0; border-top: 3px solid rgba(255,255,255,0.1);
+            z-index: 100; overflow-x: auto; white-space: nowrap;
         }
 
-        .mao-container::-webkit-scrollbar { display: none; }
-
-        #minhaMao {
-            display: inline-flex;
-            padding: 0 60px;
-            align-items: center;
-            min-width: 100%;
-        }
-
-        .carta-slot {
-            display: inline-block;
-            transition: transform 0.2s ease;
-            cursor: pointer;
-            position: relative;
-            margin-left: -35px;
-            flex-shrink: 0;
-        }
-
-        .carta-slot:first-child { margin-left: 0; }
-
-        .carta-slot img {
-            width: 95px;
-            height: auto;
-            border: 1.5px solid white;
-            border-radius: 10px;
-            box-shadow: -4px 0 10px rgba(0,0,0,0.6);
-            pointer-events: none;
-        }
-
-        .carta-slot:active {
-            transform: translateY(-20px) scale(1.05);
-            z-index: 999 !important;
-        }
+        #minhaMao { display: inline-flex; padding: 0 60px; }
+        .carta-slot { display: inline-block; margin-left: -35px; transition: 0.2s; }
+        .carta-slot img { width: 95px; border: 1.5px solid white; border-radius: 10px; }
+        .carta-slot:active { transform: translateY(-20px); z-index: 99; }
     </style>
 </head>
 <body>
 
     <div id="telaVitoria">
         <h1 id="txtVencedor">VENCEU!</h1>
-        <button class="btn-vitoria btn-reiniciar" id="btnReiniciar">JOGAR NOVAMENTE</button>
-        <button class="btn-vitoria btn-voltar" id="btnVoltarLobby">SAIR</button>
+        <button onclick="location.reload()" style="padding:15px; background:#4caf50; color:white; border-radius:10px; border:none; font-weight:bold;">JOGAR NOVAMENTE</button>
+        <button onclick="window.location.href='index.html'" style="margin-top:10px; padding:10px; background:#2196f3; color:white; border:none; border-radius:10px;">SAIR</button>
     </div>
 
     <div class="topo">
@@ -237,19 +209,25 @@
         <button id="btnSair" class="btn-sair">SAIR</button>
     </div>
 
-    <div class="lista-jogadores" id="listaJogadores">
+    <div class="lista-jogadores" id="listaJogadores"></div>
+
+    <div id="btnAbrirChat">💬</div>
+    <div id="containerChat">
+        <div id="mensagensChat"></div>
+        <div id="inputChatArea">
+            <input type="text" id="campoMsg" placeholder="Chat...">
         </div>
+    </div>
 
     <div class="area-central">
-        <div id="txtVez">Aguardando jogadores...</div>
-        
+        <div id="txtVez">Aguardando...</div>
         <div class="mesa-display">
             <div class="botoes-acao">
                 <div id="btnUno" class="btn-extra">UNO!</div>
                 <div id="btnDenunciar" class="btn-extra">DESAFIAR</div>
                 <div id="btnComprar">
                     <img src="cartas/jota.png">
-                    <div style="margin-top: 5px; font-size: 11px; font-weight: bold;">COMPRAR</div>
+                    <div style="font-size: 11px; font-weight: bold;">COMPRAR</div>
                 </div>
                 <div id="btnPassar" class="btn-extra">PASSAR VEZ</div>
             </div>
