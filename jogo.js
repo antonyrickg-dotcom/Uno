@@ -36,6 +36,7 @@ function gerarCarta() {
 }
 
 function getNomeImagem(c) {
+    if (!c) return '';
     if (c.cor === 'black') return `cartas/${c.valor}.png`;
     if (c.originalCor === 'black') return `cartas/${c.valor}_${c.cor}.png`;
     const esp = ['skip', 'reverse', 'draw2'];
@@ -52,9 +53,8 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     const dados = snapshot.val();
     if (!dados || !dados.jogadores) return;
 
-    // Atualizar Chat
     const chatDiv = document.getElementById('mensagensChat');
-    if (dados.chat) {
+    if (dados.chat && chatDiv) {
         chatDiv.innerHTML = dados.chat.map(m => `<div class="msg-item"><b>${m.nick}:</b> ${m.msg}</div>`).join('');
         chatDiv.scrollTop = chatDiv.scrollHeight;
     }
@@ -67,7 +67,6 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
 
     const nicks = Object.keys(dados.jogadores);
     
-    // Lista Jogadores
     const listaDiv = document.getElementById('listaJogadores');
     listaDiv.innerHTML = nicks.map(nick => {
         const qtd = dados.jogadores[nick].mao ? dados.jogadores[nick].mao.length : 0;
@@ -75,14 +74,11 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
         return `<div class="jogador-item ${vez}"><span>${nick === meuNick ? 'Você' : nick}</span><span class="badge-cartas">${qtd} 🗂️</span></div>`;
     }).join('');
 
-    // Cartas Iniciais
     if (!dados.jogadores[meuNick].mao) {
-        let novaMao = Array.from({length: 7}, gerarCarta);
-        await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: novaMao });
+        await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: Array.from({length: 7}, gerarCarta) });
         return;
     }
 
-    // Iniciar Turno
     if (!dados.turno && meuNick === nicks[0]) {
         await update(ref(db, `salas/${salaID}`), { turno: nicks[0], cartaNaMesa: gerarCarta(), sentido: 1, acumulado: 0 });
         return;
@@ -94,13 +90,9 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     document.getElementById('btnUno').style.display = (isMinhaVez && mao.length === 2) ? 'block' : 'none';
     document.getElementById('btnPassar').style.display = (isMinhaVez && dados.comprouNaVez && (dados.acumulado || 0) === 0) ? 'block' : 'none';
     
-    const vitima = nicks.find(n => dados.jogadores[n].esqueceuUno === true);
-    document.getElementById('btnDenunciar').style.display = (vitima && vitima !== meuNick) ? 'block' : 'none';
-
     document.getElementById('txtVez').innerHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ!</b>` : `Vez de ${dados.turno}`;
     if (dados.cartaNaMesa) document.getElementById('cartaMesa').innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
 
-    // Renderizar Mão
     const minhaMaoDiv = document.getElementById('minhaMao');
     minhaMaoDiv.innerHTML = "";
     mao.forEach((c, i) => {
@@ -117,8 +109,8 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
 function preVerificarJogada(carta, index, dados) {
     if (dados.turno !== meuNick) return;
     
-    // CORREÇÃO: Abre o modal para qualquer carta preta (wild ou wild_draw4)
-    if (carta.cor === 'black' || carta.valor.includes('wild')) {
+    // CORREÇÃO: Identifica se é curinga para abrir o modal
+    if (carta.cor === 'black' || (carta.valor && carta.valor.includes('wild'))) {
         cartaPendente = carta; 
         indicePendente = index;
         document.getElementById('modalCores').style.display = 'flex';
@@ -139,11 +131,12 @@ window.escolherNovaCor = async (cor) => {
 
 async function processarJogada(carta, index, dados) {
     const acumulado = dados.acumulado || 0;
+    const mesa = dados.cartaNaMesa;
 
-    // CORREÇÃO: Ignora validação de cor se a carta for Curinga
+    // CORREÇÃO: Permite jogar curinga sobre qualquer coisa
     if (carta.originalCor !== 'black' && carta.cor !== 'black') {
         if (acumulado > 0 && carta.valor !== 'draw2') return alert("Compre ou jogue +2!");
-        if (carta.cor !== dados.cartaNaMesa.cor && carta.valor !== dados.cartaNaMesa.valor) return alert("Inválida!");
+        if (mesa && (carta.cor !== mesa.cor && carta.valor !== mesa.valor)) return alert("Inválida!");
     }
 
     let novaMao = [...dados.jogadores[meuNick].mao];
@@ -179,14 +172,11 @@ const headerChat = document.getElementById('headerChat');
 const campoMsg = document.getElementById('campoMsg');
 const btnAbrirChat = document.getElementById('btnAbrirChat');
 
-// Corrigido: Toggle de abertura no mobile
 btnAbrirChat.addEventListener('click', () => {
-    containerChat.classList.toggle('aberto');
-    if(containerChat.classList.contains('aberto')) containerChat.style.display = 'flex';
-    else containerChat.style.display = 'none';
+    const isAberto = containerChat.style.display === 'flex';
+    containerChat.style.display = isAberto ? 'none' : 'flex';
 });
 
-// Corrigido: Enviar mensagem no PC
 campoMsg.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
         const txt = campoMsg.value.trim();
@@ -194,8 +184,8 @@ campoMsg.addEventListener('keydown', async (e) => {
         const chatRef = ref(db, `salas/${salaID}/chat`);
         const snap = await get(chatRef);
         let msgs = snap.val() || [];
-        if (msgs.length > 25) msgs.shift();
         msgs.push({ nick: meuNick, msg: txt });
+        if (msgs.length > 25) msgs.shift();
         await set(chatRef, msgs);
         campoMsg.value = "";
     }
