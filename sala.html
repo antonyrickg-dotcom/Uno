@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UNO! - Sala de Espera</title>
-    <link rel="stylesheet" href="estilo.css">
     <style>
         body {
             display: flex;
@@ -14,9 +13,9 @@
             flex-wrap: wrap;
             padding: 50px 20px;
             background: #121212;
+            font-family: sans-serif;
         }
 
-        /* Container Principal (Esquerda) */
         .sala-container {
             background: rgba(20, 20, 20, 0.95);
             padding: 30px;
@@ -28,7 +27,6 @@
             max-width: 380px;
         }
 
-        /* Painel de Regras (Direita) */
         .regras-lateral {
             background: rgba(25, 25, 25, 0.95);
             padding: 25px;
@@ -69,7 +67,6 @@
             gap: 10px;
         }
 
-        /* Estilo das Regras Coloridas */
         .regra-item {
             background: #ff5252;
             color: white;
@@ -96,20 +93,21 @@
             font-weight: 900;
             cursor: pointer;
             transition: 0.3s;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             text-transform: uppercase;
         }
 
-        .btn-off { background: #555; color: #ccc; }
-        .btn-on { background: #9c27b0; color: white; box-shadow: 0 0 15px #9c27b0; }
+        .btn-off { background: #444; color: #888; border: 2px solid #555; }
+        .btn-on { background: #9c27b0; color: white; border: 2px solid #e040fb; box-shadow: 0 0 10px #9c27b0; }
 
-        input#inputNovaRegra {
-            background: #333;
+        .btn-play {
+            padding: 15px;
+            border-radius: 12px;
             border: none;
-            padding: 12px;
-            border-radius: 8px;
+            font-weight: 900;
+            cursor: pointer;
             color: white;
-            width: 70%;
+            font-size: 1.1rem;
         }
     </style>
 </head>
@@ -132,11 +130,11 @@
         <div id="listaRegrasAtivas"></div>
 
         <div id="painelDono" style="display:none; margin-top: 25px; border-top: 2px solid #333; padding-top: 20px;">
-            <button id="btnAleatorio" class="btn-modo btn-off">MODO ALEATÓRIO: OFF</button>
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="inputNovaRegra" placeholder="Nova regra...">
-                <button id="btnAddRegra" style="flex:1; background:#4caf50; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+</button>
-            </div>
+            <h4 style="color: #aaa; margin-bottom: 10px; font-size: 0.8rem;">CONFIGURAR REGRAS:</h4>
+            <button id="regra_acumular" class="btn-modo btn-off" onclick="alternarRegra('Acumular +2')">ACUMULAR +2: OFF</button>
+            <button id="regra_sete_roda" class="btn-modo btn-off" onclick="alternarRegra('7 Roda a Mão')">7 RODA A MÃO: OFF</button>
+            <button id="regra_zero_troca" class="btn-modo btn-off" onclick="alternarRegra('0 Troca Tudo')">0 TROCA TUDO: OFF</button>
+            <button id="regra_bater_nove" class="btn-modo btn-off" onclick="alternarRegra('Bater no 9')">BATER NO 9: OFF</button>
         </div>
     </div>
 
