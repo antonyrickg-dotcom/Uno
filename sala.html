@@ -1,143 +1,180 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNO! - Sala de Espera</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 30px;
-            flex-wrap: wrap;
-            padding: 50px 20px;
-            background: #121212;
-            font-family: sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNO! - Sala de Espera</title>
 
-        .sala-container {
-            background: rgba(20, 20, 20, 0.95);
-            padding: 30px;
-            border-radius: 25px;
-            text-align: center;
-            border: 4px solid #f44336;
-            box-shadow: 0 0 25px rgba(244, 67, 54, 0.3);
-            width: 100%;
-            max-width: 380px;
-        }
+<style>
+body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 30px;
+    flex-wrap: wrap;
+    padding: 50px 20px;
+    background: #121212;
+    font-family: sans-serif;
+}
 
-        .regras-lateral {
-            background: rgba(25, 25, 25, 0.95);
-            padding: 25px;
-            border-radius: 25px;
-            border: 4px solid #ffeb3b;
-            box-shadow: 0 0 25px rgba(255, 235, 59, 0.2);
-            width: 100%;
-            max-width: 320px;
-            min-height: 300px;
-        }
+.sala-container {
+    background: rgba(20, 20, 20, 0.95);
+    padding: 30px;
+    border-radius: 25px;
+    text-align: center;
+    border: 4px solid #f44336;
+    box-shadow: 0 0 25px rgba(244, 67, 54, 0.3);
+    width: 100%;
+    max-width: 380px;
+}
 
-        .codigo-sala {
-            font-size: 3.5rem;
-            color: #ffeb3b;
-            font-weight: 900;
-            text-shadow: 0 0 15px rgba(255, 235, 59, 0.6);
-            margin: 15px 0;
-            letter-spacing: 8px;
-        }
+.regras-lateral {
+    background: rgba(25, 25, 25, 0.95);
+    padding: 25px;
+    border-radius: 25px;
+    border: 4px solid #ffeb3b;
+    box-shadow: 0 0 25px rgba(255, 235, 59, 0.2);
+    width: 100%;
+    max-width: 320px;
+    min-height: 300px;
+}
 
-        .lista-jogadores {
-            list-style: none;
-            padding: 0;
-            margin: 20px 0;
-        }
+.codigo-sala {
+    font-size: 3.5rem;
+    color: #ffeb3b;
+    font-weight: 900;
+    text-shadow: 0 0 15px rgba(255, 235, 59, 0.6);
+    margin: 15px 0;
+    letter-spacing: 8px;
+}
 
-        .jogador-item {
-            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-            margin: 10px 0;
-            padding: 15px;
-            border-radius: 12px;
-            color: white;
-            font-weight: bold;
-            border-left: 6px solid #2196f3;
-            text-align: left;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+.lista-jogadores {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+}
 
-        .regra-item {
-            background: #ff5252;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 50px;
-            margin-bottom: 10px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 0 #b71c1c;
-            display: block;
-            animation: pop 0.3s ease;
-        }
+.jogador-item {
+    background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+    margin: 10px 0;
+    padding: 15px;
+    border-radius: 12px;
+    color: white;
+    font-weight: bold;
+    border-left: 6px solid #2196f3;
+    display: flex;
+    gap: 10px;
+}
 
-        @keyframes pop {
-            0% { transform: scale(0.8); }
-            100% { transform: scale(1); }
-        }
+/* 🔥 REGRA COM INFO */
+.regra-item {
+    background: #ff5252;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 50px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 0 #b71c1c;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: pop 0.25s ease;
+}
 
-        .btn-modo {
-            width: 100%;
-            padding: 12px;
-            border-radius: 12px;
-            border: none;
-            font-weight: 900;
-            cursor: pointer;
-            transition: 0.3s;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
+.info-btn {
+    background: rgba(255,255,255,0.25);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+}
 
-        .btn-off { background: #444; color: #888; border: 2px solid #555; }
-        .btn-on { background: #9c27b0; color: white; border: 2px solid #e040fb; box-shadow: 0 0 10px #9c27b0; }
+@keyframes pop {
+    from { transform: scale(0.8); }
+    to { transform: scale(1); }
+}
 
-        .btn-play {
-            padding: 15px;
-            border-radius: 12px;
-            border: none;
-            font-weight: 900;
-            cursor: pointer;
-            color: white;
-            font-size: 1.1rem;
-        }
-    </style>
+/* 🔥 TOOLTIP MOBILE */
+.tooltip {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    background: #222;
+    color: white;
+    padding: 14px 18px;
+    border-radius: 15px;
+    max-width: 90%;
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.25s;
+    z-index: 9999;
+}
+
+.tooltip.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+    pointer-events: auto;
+}
+
+.btn-modo {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 900;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.btn-off { background: #444; color: #888; }
+.btn-on { background: #9c27b0; color: white; }
+
+.btn-play {
+    padding: 15px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 900;
+    cursor: pointer;
+    color: white;
+    font-size: 1.1rem;
+}
+</style>
 </head>
+
 <body>
 
-    <div class="sala-container">
-        <h2 style="color: white; margin: 0;">SALA DE ESPERA</h2>
-        <p style="color: #aaa;">Código da mesa:</p>
-        <div id="displayCodigo" class="codigo-sala">----</div>
-        
-        <h3 style="color: white; text-align: left; border-bottom: 1px solid #333; padding-bottom: 5px;">🎮 Jogadores</h3>
-        <ul id="listaJogadores" class="lista-jogadores"></ul>
+<div class="sala-container">
+    <h2 style="color:white;">SALA DE ESPERA</h2>
+    <p style="color:#aaa;">Código da mesa:</p>
+    <div id="displayCodigo" class="codigo-sala">----</div>
 
-        <button id="btnComeçar" class="btn-play" style="display: none; width: 100%; background: #4caf50; margin-top: 10px;">COMEÇAR PARTIDA</button>
-        <p id="waitMsg" style="color: #555;">Aguardando o mestre...</p>
+    <h3 style="color:white;">🎮 Jogadores</h3>
+    <ul id="listaJogadores" class="lista-jogadores"></ul>
+
+    <button id="btnComeçar" class="btn-play" style="display:none; background:#4caf50;">COMEÇAR PARTIDA</button>
+    <p id="waitMsg" style="color:#555;">Aguardando o mestre...</p>
+</div>
+
+<div class="regras-lateral">
+    <h3 style="color:#ffeb3b;">📜 REGRAS ATIVAS</h3>
+    <div id="listaRegrasAtivas"></div>
+
+    <div id="painelDono" style="display:none;">
+        <button id="regra_acumular" class="btn-modo btn-off" onclick="alternarRegra('Acumular +2')">ACUMULAR +2</button>
+        <button id="regra_sete_roda" class="btn-modo btn-off" onclick="alternarRegra('7 Roda a Mão')">7 RODA A MÃO</button>
+        <button id="regra_zero_troca" class="btn-modo btn-off" onclick="alternarRegra('0 Troca Tudo')">0 TROCA TUDO</button>
+        <button id="regra_bater_nove" class="btn-modo btn-off" onclick="alternarRegra('Bater no 9')">BATER NO 9</button>
     </div>
+</div>
 
-    <div class="regras-lateral">
-        <h3 style="color: #ffeb3b; margin-top: 0;">📜 REGRAS ATIVAS</h3>
-        <div id="listaRegrasAtivas"></div>
+<div id="tooltip" class="tooltip"></div>
 
-        <div id="painelDono" style="display:none; margin-top: 25px; border-top: 2px solid #333; padding-top: 20px;">
-            <h4 style="color: #aaa; margin-bottom: 10px; font-size: 0.8rem;">CONFIGURAR REGRAS:</h4>
-            <button id="regra_acumular" class="btn-modo btn-off" onclick="alternarRegra('Acumular +2')">ACUMULAR +2: OFF</button>
-            <button id="regra_sete_roda" class="btn-modo btn-off" onclick="alternarRegra('7 Roda a Mão')">7 RODA A MÃO: OFF</button>
-            <button id="regra_zero_troca" class="btn-modo btn-off" onclick="alternarRegra('0 Troca Tudo')">0 TROCA TUDO: OFF</button>
-            <button id="regra_bater_nove" class="btn-modo btn-off" onclick="alternarRegra('Bater no 9')">BATER NO 9: OFF</button>
-        </div>
-    </div>
-
-    <script type="module" src="sala.js"></script>
+<script type="module" src="sala.js"></script>
 </body>
 </html>
