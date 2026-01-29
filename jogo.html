@@ -1,326 +1,260 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyDFTRTBj7WRVn4gG9OwDCPjHP0B_NYFpCc",
-    authDomain: "unotfm.firebaseapp.com",
-    databaseURL: "https://unotfm-default-rtdb.firebaseio.com",
-    projectId: "unotfm",
-    storageBucket: "unotfm.firebasestorage.app",
-    messagingSenderId: "1035668265410",
-    appId: "1:1035668265410:web:710e61682014f9d46a1e5b"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const salaID = localStorage.getItem('salaID');
-const meuNick = localStorage.getItem('meuNick');
-
-let cartaPendente = null;
-let indicePendente = null;
-
-if (!salaID || !meuNick) window.location.href = "index.html";
-document.getElementById('txtSalaID').innerText = salaID;
-
-// --- FUNÇÕES AUXILIARES ---
-
-function gerarCarta() {
-    const cores = ['red', 'blue', 'green', 'yellow'];
-    const valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'draw2'];
-    // 15% de chance de vir Curinga
-    if (Math.random() < 0.15) {
-        const curingas = ['wild', 'wild_draw4'];
-        return { cor: 'black', valor: curingas[Math.floor(Math.random() * curingas.length)] };
-    }
-    return { cor: cores[Math.floor(Math.random() * cores.length)], valor: valores[Math.floor(Math.random() * valores.length)] };
-}
-
-function getNomeImagem(c) {
-    if (!c) return '';
-    // Se for preta original, mostra a imagem preta (ex: wild.png)
-    if (c.cor === 'black') return `cartas/${c.valor}.png`;
-    // Se era preta e foi pintada, mostra a carta pintada (ex: wild_red.png)
-    if (c.originalCor === 'black') return `cartas/${c.valor}_${c.cor}.png`;
-    
-    const esp = ['skip', 'reverse', 'draw2'];
-    return esp.includes(c.valor) ? `cartas/${c.valor}_${c.cor}.png` : `cartas/${c.cor}_${c.valor}.png`;
-}
-
-function calcProx(atual, total, sentido, pulos = 1) {
-    return (((atual + (sentido * pulos)) % total) + total) % total;
-}
-
-// --- ESCUTA FIREBASE (Atualização da Tela) ---
-
-onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
-    const dados = snapshot.val();
-    if (!dados || !dados.jogadores) return;
-
-    // Chat
-    const chatDiv = document.getElementById('mensagensChat');
-    if (dados.chat && chatDiv) {
-        chatDiv.innerHTML = dados.chat.map(m => `<div class="msg-item"><b>${m.nick}:</b> ${m.msg}</div>`).join('');
-        chatDiv.scrollTop = chatDiv.scrollHeight;
-    }
-
-    // Vitoria
-    if (dados.vencedor) {
-        document.getElementById('telaVitoria').style.display = 'flex';
-        document.getElementById('txtVencedor').innerText = dados.vencedor === meuNick ? "VOCÊ VENCEU!" : `${dados.vencedor} VENCEU!`;
-        return;
-    }
-
-    const nicks = Object.keys(dados.jogadores);
-    
-    // Lista Lateral
-    const listaDiv = document.getElementById('listaJogadores');
-    if(listaDiv) {
-        listaDiv.innerHTML = nicks.map(nick => {
-            const qtd = dados.jogadores[nick].mao ? dados.jogadores[nick].mao.length : 0;
-            const vez = dados.turno === nick ? 'vez-dele' : '';
-            return `<div class="jogador-item ${vez}"><span>${nick === meuNick ? 'Você' : nick}</span><span class="badge-cartas">${qtd} 🗂️</span></div>`;
-        }).join('');
-    }
-
-    // Inicializar Mão se vazia
-    if (!dados.jogadores[meuNick].mao) {
-        await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: Array.from({length: 7}, gerarCarta) });
-        return;
-    }
-
-    // Inicializar Mesa se nova sala
-    if (!dados.turno && meuNick === nicks[0]) {
-        await update(ref(db, `salas/${salaID}`), { turno: nicks[0], cartaNaMesa: gerarCarta(), sentido: 1, acumulado: 0 });
-        return;
-    }
-
-    // Controles de Vez
-    const isMinhaVez = dados.turno === meuNick;
-    const mao = dados.jogadores[meuNick].mao || [];
-    
-    document.getElementById('btnUno').style.display = (isMinhaVez && mao.length === 2) ? 'block' : 'none';
-    document.getElementById('btnPassar').style.display = (isMinhaVez && dados.comprouNaVez && (dados.acumulado || 0) === 0) ? 'block' : 'none';
-    
-    // Botão Desafiar (Exemplo simplificado)
-    const btnDenunciar = document.getElementById('btnDenunciar');
-    if(btnDenunciar) {
-        const vitima = nicks.find(n => dados.jogadores[n].esqueceuUno === true);
-        btnDenunciar.style.display = (vitima && vitima !== meuNick) ? 'block' : 'none';
-    }
-
-    document.getElementById('txtVez').innerHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ!</b>` : `Vez de ${dados.turno}`;
-    if (dados.cartaNaMesa) document.getElementById('cartaMesa').innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
-
-    // Renderizar Minha Mão
-    const minhaMaoDiv = document.getElementById('minhaMao');
-    minhaMaoDiv.innerHTML = "";
-    mao.forEach((c, i) => {
-        const slot = document.createElement('div');
-        slot.className = "carta-slot";
-        slot.innerHTML = `<img src="${getNomeImagem(c)}">`;
-        slot.onclick = () => preVerificarJogada(c, i, dados);
-        minhaMaoDiv.appendChild(slot);
-    });
-});
-
-// --- LÓGICA DO JOGO ---
-
-function preVerificarJogada(carta, index, dados) {
-    if (dados.turno !== meuNick) return;
-
-    // SE FOR CURINGA (PRETA), ABRE O MODAL
-    if (carta.cor === 'black' || (carta.valor && carta.valor.includes('wild'))) {
-        cartaPendente = carta; 
-        indicePendente = index;
-        const modal = document.getElementById('modalCores');
-        
-        if (modal) {
-            modal.style.display = 'flex';
-        } else {
-            alert("ERRO: O Modal de Cores não foi encontrado no HTML.");
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UNO Arena - Em Partida</title>
+    <style>
+        body {
+            background: radial-gradient(circle, #2c3e50 0%, #000000 100%);
+            color: white;
+            font-family: 'Arial Black', sans-serif;
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            touch-action: manipulation;
         }
-        return; // PAUSA AQUI e espera o jogador clicar na cor
-    }
-    
-    // Se não for curinga, segue o jogo normal
-    processarJogada(carta, index, dados);
-}
 
-// Essa função precisa estar no window para o HTML "enxergar"
-window.escolherNovaCor = async (cor) => {
-    document.getElementById('modalCores').style.display = 'none';
-    
-    // Pega os dados mais recentes para evitar conflito
-    const snap = await get(ref(db, `salas/${salaID}`));
-    const dadosAtuais = snap.val();
-
-    if (cartaPendente) {
-        // Cria uma cópia da carta transformando ela na cor escolhida
-        const cartaComCor = { 
-            ...cartaPendente, 
-            cor: cor, 
-            originalCor: 'black' // Marca que ela era preta originalmente
-        };
-        processarJogada(cartaComCor, indicePendente, dadosAtuais);
-        cartaPendente = null;
-        indicePendente = null;
-    }
-};
-
-async function processarJogada(carta, index, dados) {
-    const acumulado = dados.acumulado || 0;
-    const mesa = dados.cartaNaMesa;
-
-    // Validação básica (Cor ou Valor igual), exceto se for Curinga (que já passou pelo modal)
-    if (carta.originalCor !== 'black' && carta.cor !== 'black') {
-        if (acumulado > 0 && carta.valor !== 'draw2') return alert("Você precisa comprar ou jogar um +2!");
-        if (mesa && (carta.cor !== mesa.cor && carta.valor !== mesa.valor)) return alert("Essa carta não combina!");
-    }
-
-    // Remove a carta da mão
-    let novaMao = [...dados.jogadores[meuNick].mao];
-    novaMao.splice(index, 1);
-    
-    // Verifica Vitória
-    if (novaMao.length === 0) return await update(ref(db, `salas/${salaID}`), { vencedor: meuNick });
-
-    // Calcula próximo jogador e efeitos
-    const nicks = Object.keys(dados.jogadores);
-    let sentido = dados.sentido || 1;
-    let novoAcumulado = acumulado;
-
-    // Aplica penalidades
-    if (carta.valor === 'draw2') novoAcumulado += 2;
-    if (carta.valor === 'wild_draw4') novoAcumulado += 4;
-
-    // Calcula Turno
-    let proximo;
-    if (carta.valor === 'skip') {
-        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 2);
-    } else if (carta.valor === 'reverse') {
-        sentido *= -1;
-        // Se só tem 2 jogadores, Inverter age como Pular
-        proximo = (nicks.length === 2) ? nicks.indexOf(meuNick) : calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1);
-    } else {
-        proximo = calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1);
-    }
-
-    // Envia tudo pro Firebase
-    await update(ref(db, `salas/${salaID}`), {
-        [`jogadores/${meuNick}/mao`]: novaMao,
-        cartaNaMesa: carta,
-        turno: nicks[proximo],
-        sentido: sentido,
-        acumulado: novoAcumulado,
-        comprouNaVez: false
-    });
-}
-
-// --- INTERFACE (CHAT E BOTÕES) ---
-
-const containerChat = document.getElementById('containerChat');
-const headerChat = document.getElementById('headerChat');
-const campoMsg = document.getElementById('campoMsg');
-const btnAbrirChat = document.getElementById('btnAbrirChat');
-
-// Abrir/Fechar Chat Mobile
-if(btnAbrirChat) {
-    btnAbrirChat.addEventListener('click', () => {
-        const isAberto = containerChat.style.display === 'flex';
-        containerChat.style.display = isAberto ? 'none' : 'flex';
-    });
-}
-
-// Enviar Mensagem
-if(campoMsg) {
-    campoMsg.addEventListener('keydown', async (e) => {
-        if (e.key === 'Enter') {
-            const txt = campoMsg.value.trim();
-            if (!txt) return;
-            const chatRef = ref(db, `salas/${salaID}/chat`);
-            const snap = await get(chatRef);
-            let msgs = snap.val() || [];
-            msgs.push({ nick: meuNick, msg: txt });
-            if (msgs.length > 25) msgs.shift();
-            await set(chatRef, msgs);
-            campoMsg.value = "";
+        .topo {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #444;
+            z-index: 10;
         }
-    });
-}
 
-// Arrastar Chat
-let isDragging = false;
-let startX, startY, initialX, initialY;
+        .btn-sair {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
 
-const startMove = (e) => {
-    // Só arrasta se clicar no header
-    if(e.target.id !== 'headerChat') return;
-    
-    isDragging = true;
-    const pos = e.type.includes('touch') ? e.touches[0] : e;
-    startX = pos.clientX;
-    startY = pos.clientY;
-    initialX = containerChat.offsetLeft;
-    initialY = containerChat.offsetTop;
-};
+        .lista-jogadores {
+            position: fixed;
+            top: 65px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #555;
+            z-index: 5;
+            min-width: 130px;
+        }
 
-const doMove = (e) => {
-    if (!isDragging) return;
-    e.preventDefault(); // Evita scroll da tela enquanto arrasta
-    const pos = e.type.includes('touch') ? e.touches[0] : e;
-    const dx = pos.clientX - startX;
-    const dy = pos.clientY - startY;
-    containerChat.style.left = (initialX + dx) + 'px';
-    containerChat.style.top = (initialY + dy) + 'px';
-    containerChat.style.right = 'auto'; // Remove fixação à direita
-    containerChat.style.bottom = 'auto'; // Remove fixação embaixo
-};
+        .jogador-item {
+            font-size: 13px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
 
-if(headerChat) {
-    headerChat.addEventListener('mousedown', startMove);
-    headerChat.addEventListener('touchstart', startMove, {passive: false});
-    window.addEventListener('mousemove', doMove);
-    window.addEventListener('touchmove', doMove, {passive: false});
-    window.addEventListener('mouseup', () => isDragging = false);
-    window.addEventListener('touchend', () => isDragging = false);
-}
+        .jogador-item.vez-dele { color: #4caf50; text-shadow: 0 0 8px #4caf50; }
 
-// Botões de Jogo
-document.getElementById('btnComprar').onclick = async () => {
-    const snap = await get(ref(db, `salas/${salaID}`));
-    const d = snap.val();
-    if (d.turno !== meuNick || d.comprouNaVez) return;
-    
-    let m = d.jogadores[meuNick].mao || [];
-    
-    // Se tem acumulado (+2 ou +4), compra tudo
-    if (d.acumulado > 0) {
-        for(let i=0; i<d.acumulado; i++) m.push(gerarCarta());
-        const prox = calcProx(Object.keys(d.jogadores).indexOf(meuNick), Object.keys(d.jogadores).length, d.sentido, 1);
-        
-        await update(ref(db, `salas/${salaID}`), { 
-            [`jogadores/${meuNick}/mao`]: m, 
-            acumulado: 0, 
-            turno: Object.keys(d.jogadores)[prox] 
-        });
-    } else {
-        // Compra normal (1 carta)
-        m.push(gerarCarta());
-        await update(ref(db, `salas/${salaID}`), { 
-            [`jogadores/${meuNick}/mao`]: m, 
-            comprouNaVez: true 
-        });
-    }
-};
+        .badge-cartas {
+            background: #f44336;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
 
-document.getElementById('btnPassar').onclick = async () => {
-    const snap = await get(ref(db, `salas/${salaID}`));
-    const d = snap.val();
-    const prox = calcProx(Object.keys(d.jogadores).indexOf(meuNick), Object.keys(d.jogadores).length, d.sentido, 1);
-    await update(ref(db, `salas/${salaID}`), { 
-        turno: Object.keys(d.jogadores)[prox], 
-        comprouNaVez: false 
-    });
-};
+        /* --- CHAT --- */
+        #containerChat {
+            position: fixed;
+            right: 15px;
+            bottom: 180px;
+            width: 260px;
+            height: 250px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #444;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
 
-document.getElementById('btnSair').onclick = () => window.location.href = "index.html";
+        #headerChat {
+            background: #333;
+            padding: 8px;
+            text-align: center;
+            font-size: 10px;
+            cursor: move;
+            border-radius: 10px 10px 0 0;
+            user-select: none;
+            color: #aaa;
+        }
+
+        #mensagensChat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: sans-serif;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .msg-item { line-height: 1.4; border-bottom: 1px solid #222; padding-bottom: 2px; }
+        .msg-item b { color: #ffeb3b; }
+
+        #inputChatArea {
+            display: flex;
+            padding: 8px;
+            background: #111;
+            border-radius: 0 0 12px 12px;
+        }
+
+        #campoMsg {
+            flex: 1;
+            background: #222;
+            border: 1px solid #444;
+            color: white;
+            padding: 6px;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        #btnAbrirChat {
+            position: fixed;
+            right: 15px;
+            bottom: 160px;
+            background: #2196f3;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 50px;
+            font-size: 24px;
+            z-index: 1001;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            cursor: pointer;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            #containerChat {
+                display: none;
+                width: 230px;
+                height: 220px;
+                right: 10px;
+                bottom: 220px;
+            }
+            #containerChat.aberto { display: flex; }
+            #btnAbrirChat { display: block; }
+        }
+
+        /* --- JOGO --- */
+        .area-central {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding-bottom: 160px; 
+        }
+
+        #txtVez { font-size: 1.1rem; text-align: center; min-height: 45px; }
+
+        .mesa-display { display: flex; align-items: center; gap: 20px; }
+        #cartaMesa img { width: 110px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+
+        .botoes-acao { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        #btnComprar { background: none; border: none; cursor: pointer; color: white; }
+        #btnComprar img { width: 85px; border-radius: 8px; border: 2px solid white; }
+
+        .btn-extra {
+            padding: 10px 15px; border-radius: 8px; border: 2px solid white;
+            font-weight: bold; cursor: pointer; display: none; width: 130px; text-align: center;
+        }
+
+        #btnUno { background: #ff9800; color: white; }
+        #btnPassar { background: #607d8b; color: white; }
+        #btnDenunciar { background: #f44336; color: white; animation: pulse 1s infinite; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        #telaVitoria {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 2000; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        .mao-container {
+            background: rgba(0,0,0,0.85); width: 100%; padding: 25px 0 45px 0;
+            position: fixed; bottom: 0; border-top: 3px solid rgba(255,255,255,0.1);
+            z-index: 100; overflow-x: auto; white-space: nowrap;
+        }
+
+        #minhaMao { display: inline-flex; padding: 0 60px; }
+        .carta-slot { display: inline-block; margin-left: -35px; transition: 0.2s; }
+        .carta-slot img { width: 95px; border: 1.5px solid white; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="telaVitoria">
+        <h1 id="txtVencedor">VENCEU!</h1>
+        <button onclick="location.reload()" style="padding:15px; background:#4caf50; color:white; border-radius:10px; border:none; font-weight:bold; cursor:pointer;">JOGAR NOVAMENTE</button>
+        <button onclick="window.location.href='index.html'" style="margin-top:10px; padding:10px; background:#2196f3; color:white; border:none; border-radius:10px; cursor:pointer;">SAIR</button>
+    </div>
+
+    <div class="topo">
+        <span>SALA: <b id="txtSalaID">---</b></span>
+        <button id="btnSair" class="btn-sair">SAIR</button>
+    </div>
+
+    <div class="lista-jogadores" id="listaJogadores"></div>
+
+    <div id="btnAbrirChat">💬</div>
+    <div id="containerChat">
+        <div id="headerChat">⠿ ARRASTAR CHAT</div>
+        <div id="mensagensChat"></div>
+        <div id="inputChatArea">
+            <input type="text" id="campoMsg" placeholder="Chat..." autocomplete="off">
+        </div>
+    </div>
+
+    <div class="area-central">
+        <div id="txtVez">Aguardando...</div>
+        <div class="mesa-display">
+            <div class="botoes-acao">
+                <div id="btnUno" class="btn-extra">UNO!</div>
+                <div id="btnDenunciar" class="btn-extra">DESAFIAR</div>
+                <div id="btnComprar">
+                    <img src="cartas/jota.png" alt="Baralho">
+                    <div style="font-size: 11px; font-weight: bold;">COMPRAR</div>
+                </div>
+                <div id="btnPassar" class="btn-extra">PASSAR VEZ</div>
+            </div>
+            <div id="cartaMesa"></div>
+        </div>
+    </div>
+
+    <div class="mao-container">
+        <div id="minhaMao"></div>
+    </div>
+
+    <div id="modalCores" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; flex-direction:column; justify-content:center; align-items:center;">
+        <h2 style="color:white; margin-bottom:20px;">ESCOLHA A COR</h2>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            <button onclick="escolherNovaCor('red')" style="background:#f44336; width:80px; height:80px; border:2px solid white; border-radius:10px; cursor:pointer;"></button>
+            <button onclick="escolherNovaCor('blue')" style="background:#2196f3; width:80px; height:80px; border:2px solid white; border-radius:10px; cursor:pointer;"></button>
+            <button onclick="escolherNovaCor('green')" style="background:#4caf50; width:80px; height:80px; border:2px solid white; border-radius:10px; cursor:pointer;"></button>
+            <button onclick="escolherNovaCor('yellow')" style="background:#ffeb3b; width:80px; height:80px; border:2px solid white; border-radius:10px; cursor:pointer;"></button>
+        </div>
+    </div>
+
+    <script type="module" src="jogo.js"></script>
+</body>
+</html>
