@@ -17,91 +17,60 @@ const db = getDatabase(app);
 const salaID = localStorage.getItem('salaID');
 const meuNick = localStorage.getItem('meuNick');
 
-if (!salaID) window.location.href = "index.html";
+const explicacoes = {
+    "Acumular +2": "Permite acumular cartas +2.",
+    "7 Roda a Mão": "Quando sai 7, os jogadores trocam as mãos.",
+    "0 Troca Tudo": "Quando sai 0, todas as mãos são trocadas.",
+    "Bater no 9": "Regra especial ao bater no 9."
+};
 
-document.getElementById('displayCodigo').innerText = salaID;
-const salaRef = ref(db, 'salas/' + salaID);
+const tooltip = document.getElementById("tooltip");
 
-// --- ESCUTANDO MUDANÇAS NA SALA ---
-onValue(salaRef, (snapshot) => {
-    const dados = snapshot.val();
-    if (!dados) return;
+window.mostrarInfo = (texto) => {
+    tooltip.innerText = texto;
+    tooltip.classList.add("show");
+    setTimeout(() => tooltip.classList.remove("show"), 4000);
+};
 
-    // Redireciona se o jogo começar
-    if (dados.status === "em_jogo") {
-        window.location.href = "jogo.html";
-        return;
-    }
-
-    // 1. Atualiza Jogadores
-    const lista = document.getElementById('listaJogadores');
-    lista.innerHTML = "";
-    for (let j in dados.jogadores) {
-        const isMestre = j === dados.dono;
-        lista.innerHTML += `
-            <li class="jogador-item">
-                <span>🎴 ${j}</span>
-                ${isMestre ? '<small style="color:#ffeb3b; font-size:0.7rem; margin-left:5px;">(MESTRE)</small>' : ''}
-            </li>`;
-    }
-
-    // 2. Atualiza Lista de Regras (para todos verem)
-    const divRegras = document.getElementById('listaRegrasAtivas');
-    divRegras.innerHTML = "";
-    if (dados.regras) {
-        Object.values(dados.regras).forEach(regra => {
-            divRegras.innerHTML += `<div class="regra-item">⚠️ ${regra}</div>`;
-        });
-    } else {
-        divRegras.innerHTML = "<p style='color:#555; font-size:0.8rem;'>Regras padrão ativadas.</p>";
-    }
-
-    // 3. Lógica específica do Dono
-    if (dados.dono === meuNick) {
-        document.getElementById('painelDono').style.display = "block";
-        document.getElementById('btnComeçar').style.display = "block";
-        document.getElementById('waitMsg').style.display = "none";
-        
-        // Sincroniza visual dos botões fixos
-        const regrasAtivas = dados.regras ? Object.values(dados.regras) : [];
-        const configBotoes = {
-            'Acumular +2': 'regra_acumular',
-            '7 Roda a Mão': 'regra_sete_roda',
-            '0 Troca Tudo': 'regra_zero_troca',
-            'Bater no 9': 'regra_bater_nove'
-        };
-
-        for (let [nome, id] of Object.entries(configBotoes)) {
-            const btn = document.getElementById(id);
-            if (btn) {
-                const ativa = regrasAtivas.includes(nome);
-                btn.innerText = `${nome.toUpperCase()}: ${ativa ? "ON" : "OFF"}`;
-                btn.className = ativa ? "btn-modo btn-on" : "btn-modo btn-off";
-            }
-        }
+document.addEventListener("click", e => {
+    if (!e.target.classList.contains("info-btn")) {
+        tooltip.classList.remove("show");
     }
 });
 
-// --- FUNÇÕES GLOBAIS ---
+const salaRef = ref(db, 'salas/' + salaID);
 
-window.alternarRegra = async (nomeRegra) => {
+onValue(salaRef, snapshot => {
+    const dados = snapshot.val();
+    if (!dados) return;
+
+    const divRegras = document.getElementById("listaRegrasAtivas");
+    divRegras.innerHTML = "";
+
+    if (dados.regras) {
+        Object.values(dados.regras).forEach(regra => {
+            divRegras.innerHTML += `
+                <div class="regra-item">
+                    <span>⚠️ ${regra}</span>
+                    <span class="info-btn" onclick="mostrarInfo('${explicacoes[regra] || "Regra personalizada."}')">ℹ️</span>
+                </div>
+            `;
+        });
+    }
+});
+
+window.alternarRegra = async (nome) => {
     const snap = await get(salaRef);
     const dados = snap.val();
     if (dados.dono !== meuNick) return;
 
     let regras = dados.regras || {};
-    const chave = nomeRegra.replace(/\s+/g, '_').toLowerCase();
+    const chave = nome.replace(/\s+/g, '_').toLowerCase();
 
-    if (Object.values(regras).includes(nomeRegra)) {
-        // Desativa: remove do Firebase
-        const keyRemover = Object.keys(regras).find(k => regras[k] === nomeRegra);
-        set(ref(db, `salas/${salaID}/regras/${keyRemover}`), null);
+    if (Object.values(regras).includes(nome)) {
+        const key = Object.keys(regras).find(k => regras[k] === nome);
+        set(ref(db, `salas/${salaID}/regras/${key}`), null);
     } else {
-        // Ativa: adiciona ao Firebase
-        update(ref(db, `salas/${salaID}/regras`), { [chave]: nomeRegra });
+        update(ref(db, `salas/${salaID}/regras`), { [chave]: nome });
     }
-};
-
-document.getElementById('btnComeçar').onclick = () => {
-    update(ref(db, `salas/${salaID}`), { status: "em_jogo" });
 };
