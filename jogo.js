@@ -103,7 +103,10 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     
     // Botão Desafiar (Exemplo simplificado)
     const btnDenunciar = document.getElementById('btnDenunciar');
-    if(btnDenunciar) btnDenunciar.style.display = 'none'; 
+    if(btnDenunciar) {
+        const vitima = nicks.find(n => dados.jogadores[n].esqueceuUno === true);
+        btnDenunciar.style.display = (vitima && vitima !== meuNick) ? 'block' : 'none';
+    }
 
     document.getElementById('txtVez').innerHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ!</b>` : `Vez de ${dados.turno}`;
     if (dados.cartaNaMesa) document.getElementById('cartaMesa').innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
@@ -125,11 +128,12 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
 function preVerificarJogada(carta, index, dados) {
     if (dados.turno !== meuNick) return;
 
-    // Se a carta é preta (Curinga ou +4), ABRE O MODAL
+    // SE FOR CURINGA (PRETA), ABRE O MODAL
     if (carta.cor === 'black' || (carta.valor && carta.valor.includes('wild'))) {
         cartaPendente = carta; 
         indicePendente = index;
         const modal = document.getElementById('modalCores');
+        
         if (modal) {
             modal.style.display = 'flex';
         } else {
@@ -142,7 +146,7 @@ function preVerificarJogada(carta, index, dados) {
     processarJogada(carta, index, dados);
 }
 
-// Essa função é chamada pelos botões do Modal no HTML
+// Essa função precisa estar no window para o HTML "enxergar"
 window.escolherNovaCor = async (cor) => {
     document.getElementById('modalCores').style.display = 'none';
     
