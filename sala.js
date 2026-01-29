@@ -2,13 +2,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDFTRTBj7WRVn4gG9OwDCPjHP0B_NYFpCc",
-  authDomain: "unotfm.firebaseapp.com",
-  databaseURL: "https://unotfm-default-rtdb.firebaseio.com",
-  projectId: "unotfm",
-  storageBucket: "unotfm.firebasestorage.app",
-  messagingSenderId: "1035668265410",
-  appId: "1:1035668265410:web:710e61682014f9d46a1e5b"
+    apiKey: "AIzaSyDFTRTBj7WRVn4gG9OwDCPjHP0B_NYFpCc",
+    authDomain: "unotfm.firebaseapp.com",
+    databaseURL: "https://unotfm-default-rtdb.firebaseio.com",
+    projectId: "unotfm",
+    storageBucket: "unotfm.firebasestorage.app",
+    messagingSenderId: "1035668265410",
+    appId: "1:1035668265410:web:710e61682014f9d46a1e5b"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -20,7 +20,6 @@ const meuNick = localStorage.getItem('meuNick');
 if (!salaID) window.location.href = "index.html";
 
 document.getElementById('displayCodigo').innerText = salaID;
-
 const salaRef = ref(db, 'salas/' + salaID);
 
 // --- ESCUTANDO MUDANÇAS NA SALA ---
@@ -28,13 +27,13 @@ onValue(salaRef, (snapshot) => {
     const dados = snapshot.val();
     if (!dados) return;
 
-    // NOVIDADE: Verifica se o mestre deu o play no jogo
+    // Redireciona se o jogo começar
     if (dados.status === "em_jogo") {
         window.location.href = "jogo.html";
         return;
     }
 
-    // 1. Atualiza Jogadores com visual melhorado
+    // 1. Atualiza Jogadores
     const lista = document.getElementById('listaJogadores');
     lista.innerHTML = "";
     for (let j in dados.jogadores) {
@@ -42,11 +41,11 @@ onValue(salaRef, (snapshot) => {
         lista.innerHTML += `
             <li class="jogador-item">
                 <span>🎴 ${j}</span>
-                ${isMestre ? '<small style="color:#ffeb3b; font-size:0.7rem;">(MESTRE)</small>' : ''}
+                ${isMestre ? '<small style="color:#ffeb3b; font-size:0.7rem; margin-left:5px;">(MESTRE)</small>' : ''}
             </li>`;
     }
 
-    // 2. Atualiza Regras com as cores e animação
+    // 2. Atualiza Lista de Regras (para todos verem)
     const divRegras = document.getElementById('listaRegrasAtivas');
     divRegras.innerHTML = "";
     if (dados.regras) {
@@ -57,61 +56,52 @@ onValue(salaRef, (snapshot) => {
         divRegras.innerHTML = "<p style='color:#555; font-size:0.8rem;'>Regras padrão ativadas.</p>";
     }
 
-    // 3. Interface do Dono (Mestre)
+    // 3. Lógica específica do Dono
     if (dados.dono === meuNick) {
         document.getElementById('painelDono').style.display = "block";
         document.getElementById('btnComeçar').style.display = "block";
         document.getElementById('waitMsg').style.display = "none";
         
-        // Atualiza estilo do botão aleatório
-        const btnAle = document.getElementById('btnAleatorio');
-        btnAle.innerText = dados.modoAleatorio ? "MODO ALEATÓRIO: ON" : "MODO ALEATÓRIO: OFF";
-        btnAle.className = dados.modoAleatorio ? "btn-modo btn-on" : "btn-modo btn-off";
+        // Sincroniza visual dos botões fixos
+        const regrasAtivas = dados.regras ? Object.values(dados.regras) : [];
+        const configBotoes = {
+            'Acumular +2': 'regra_acumular',
+            '7 Roda a Mão': 'regra_sete_roda',
+            '0 Troca Tudo': 'regra_zero_troca',
+            'Bater no 9': 'regra_bater_nove'
+        };
+
+        for (let [nome, id] of Object.entries(configBotoes)) {
+            const btn = document.getElementById(id);
+            if (btn) {
+                const ativa = regrasAtivas.includes(nome);
+                btn.innerText = `${nome.toUpperCase()}: ${ativa ? "ON" : "OFF"}`;
+                btn.className = ativa ? "btn-modo btn-on" : "btn-modo btn-off";
+            }
+        }
     }
 });
 
-// --- FUNÇÕES DO DONO ---
+// --- FUNÇÕES GLOBAIS ---
 
-// Botão de COMEÇAR PARTIDA
-document.getElementById('btnComeçar').onclick = () => {
-    // Altera o status para disparar o redirecionamento em todos os jogadores
-    update(ref(db, `salas/${salaID}`), {
-        status: "em_jogo"
-    });
-};
+window.alternarRegra = async (nomeRegra) => {
+    const snap = await get(salaRef);
+    const dados = snap.val();
+    if (dados.dono !== meuNick) return;
 
-// Adicionar regra manual
-document.getElementById('btnAddRegra').onclick = () => {
-    const texto = document.getElementById('inputNovaRegra').value.trim();
-    if (!texto) return;
-    const novaRegraKey = Date.now();
-    update(ref(db, `salas/${salaID}/regras`), { [novaRegraKey]: texto });
-    document.getElementById('inputNovaRegra').value = "";
-};
+    let regras = dados.regras || {};
+    const chave = nomeRegra.replace(/\s+/g, '_').toLowerCase();
 
-// Modo Aleatório
-document.getElementById('btnAleatorio').onclick = async () => {
-    const snapshot = await get(ref(db, `salas/${salaID}/modoAleatorio`));
-    const isAtivo = snapshot.val() || false;
-
-    if (!isAtivo) {
-        const sugestoes = [
-            "7 roda a mão", 
-            "0 troca tudo", 
-            "Acumular +2", 
-            "Bater no 9", 
-            "Pular próximo se for carta 5",
-            "Mão invisível (esconde cartas)"
-        ];
-        const sorteadas = sugestoes.sort(() => 0.5 - Math.random()).slice(0, 2);
-        update(ref(db, `salas/${salaID}`), {
-            modoAleatorio: true,
-            regras: { ...sorteadas }
-        });
+    if (Object.values(regras).includes(nomeRegra)) {
+        // Desativa: remove do Firebase
+        const keyRemover = Object.keys(regras).find(k => regras[k] === nomeRegra);
+        set(ref(db, `salas/${salaID}/regras/${keyRemover}`), null);
     } else {
-        update(ref(db, `salas/${salaID}`), {
-            modoAleatorio: false,
-            regras: null
-        });
+        // Ativa: adiciona ao Firebase
+        update(ref(db, `salas/${salaID}/regras`), { [chave]: nomeRegra });
     }
+};
+
+document.getElementById('btnComeçar').onclick = () => {
+    update(ref(db, `salas/${salaID}`), { status: "em_jogo" });
 };
