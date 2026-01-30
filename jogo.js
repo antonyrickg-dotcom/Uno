@@ -101,7 +101,15 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     document.getElementById('btnUno').style.display = (isMinhaVez && mao.length === 2) ? 'block' : 'none';
     document.getElementById('btnPassar').style.display = (isMinhaVez && dados.comprouNaVez && (dados.acumulado || 0) === 0) ? 'block' : 'none';
     
-    // Botão Desafiar (Exemplo simplificado)
+    // --- LÓGICA DO MODAL DE DESAFIO +4 ---
+    const modalDesafio = document.getElementById('modalDesafio');
+    if (dados.statusMais4 === "pendente" && isMinhaVez) {
+        modalDesafio.style.display = 'flex';
+    } else if (modalDesafio) {
+        modalDesafio.style.display = 'none';
+    }
+
+    // Botão Denunciar (Exemplo simplificado)
     const btnDenunciar = document.getElementById('btnDenunciar');
     if(btnDenunciar) {
         const vitima = nicks.find(n => dados.jogadores[n].esqueceuUno === true);
@@ -167,6 +175,41 @@ window.escolherNovaCor = async (cor) => {
     }
 };
 
+// --- FUNÇÃO DE RESPONDER DESAFIO +4 ---
+window.responderDesafio = async (desafiou) => {
+    document.getElementById('modalDesafio').style.display = 'none';
+    const snap = await get(ref(db, `salas/${salaID}`));
+    const d = snap.val();
+    const atacante = d.quemJogouMais4;
+    const corAnterior = d.corAntesDoMais4;
+    let minhaMao = [...d.jogadores[meuNick].mao];
+
+    if (desafiou) {
+        const maoAtacante = d.jogadores[atacante].mao;
+        // Verifica se o atacante tinha a cor que estava na mesa antes do +4
+        const mentiu = maoAtacante.some(c => c.cor === corAnterior || c.originalCor === corAnterior);
+
+        if (mentiu) {
+            alert(`O DESAFIO VENCEU! ${atacante} tinha a cor e vai comprar 4.`);
+            let novaMaoAtacante = [...maoAtacante];
+            for(let i=0; i<4; i++) novaMaoAtacante.push(gerarCarta());
+            await update(ref(db, `salas/${salaID}/jogadores/${atacante}`), { mao: novaMaoAtacante });
+        } else {
+            alert("O DESAFIO FALHOU! Você compra 6 cartas (4 do efeito + 2 de penalidade).");
+            for(let i=0; i<6; i++) minhaMao.push(gerarCarta());
+            await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: minhaMao });
+        }
+    } else {
+        // Apenas aceitou o +4
+        for(let i=0; i<4; i++) minhaMao.push(gerarCarta());
+        await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: minhaMao });
+    }
+
+    const nicks = Object.keys(d.jogadores);
+    const prox = calcProx(nicks.indexOf(meuNick), nicks.length, d.sentido, 1);
+    await update(ref(db, `salas/${salaID}`), { turno: nicks[prox], acumulado: 0, statusMais4: "resolvido" });
+};
+
 async function processarJogada(carta, index, dados) {
     const acumulado = dados.acumulado || 0;
     const mesa = dados.cartaNaMesa;
@@ -189,9 +232,21 @@ async function processarJogada(carta, index, dados) {
     let sentido = dados.sentido || 1;
     let novoAcumulado = acumulado;
 
-    // Aplica penalidades
+    // --- LÓGICA ESPECIAL +4 ---
+    if (carta.valor === 'wild_draw4') {
+        await update(ref(db, `salas/${salaID}`), {
+            [`jogadores/${meuNick}/mao`]: novaMao,
+            cartaNaMesa: carta,
+            turno: nicks[calcProx(nicks.indexOf(meuNick), nicks.length, sentido, 1)],
+            statusMais4: "pendente",
+            quemJogouMais4: meuNick,
+            corAntesDoMais4: mesa.cor
+        });
+        return;
+    }
+
+    // Aplica penalidades normais
     if (carta.valor === 'draw2') novoAcumulado += 2;
-    if (carta.valor === 'wild_draw4') novoAcumulado += 4;
 
     // Calcula Turno
     let proximo;
