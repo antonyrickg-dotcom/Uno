@@ -1,269 +1,233 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>UNO Arena - Em Partida</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO TFM - Mesa</title>
     <style>
-        body {
-            background: radial-gradient(circle, #2c3e50 0%, #000000 100%);
-            color: white;
-            font-family: 'Arial Black', sans-serif;
-            margin: 0;
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            touch-action: manipulation;
-        }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #222; color: white; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Layout Principal */
+        #listaJogadores { width: 200px; background: #333; padding: 10px; display: flex; flex-direction: column; gap: 10px; border-right: 2px solid #444; }
+        .jogador-item { padding: 10px; background: #444; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .vez-dele { border: 2px solid #4caf50; box-shadow: 0 0 10px #4caf50; }
+        .badge-cartas { font-size: 0.9em; background: #555; padding: 2px 5px; border-radius: 4px; }
 
-        .topo {
-            background: rgba(0, 0, 0, 0.8);
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #444;
-            z-index: 10;
-        }
+        #areaJogo { flex: 1; display: flex; flex-direction: column; position: relative; }
+        #topoJogo { height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; background: #2a2a2a; border-bottom: 2px solid #444; }
+        
+        #mesa { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; background: radial-gradient(circle, #3a3a3a, #222); position: relative; }
+        
+        #cartaMesa img { width: 120px; height: 180px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        
+        #minhaMao { height: 160px; display: flex; gap: -40px; justify-content: center; align-items: center; padding: 10px; overflow-x: auto; background: rgba(0,0,0,0.3); }
+        .carta-slot { transition: transform 0.2s; cursor: pointer; margin-left: -30px; }
+        .carta-slot:first-child { margin-left: 0; }
+        .carta-slot:hover { transform: translateY(-20px) scale(1.1); z-index: 10; }
+        .carta-slot img { width: 90px; height: 135px; border-radius: 8px; box-shadow: -2px 0 5px rgba(0,0,0,0.3); }
 
-        .btn-sair {
-            background: #f44336;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
+        /* Botões de Ação */
+        .controles { position: absolute; bottom: 180px; display: flex; gap: 10px; z-index: 100; }
+        button { padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-acao { background: #2196f3; color: white; }
+        .btn-acao:hover { background: #1976d2; }
+        #btnUno { background: #ff9800; color: white; display: none; animation: pulse 1s infinite; }
+        #btnPassar { background: #9e9e9e; display: none; }
+        #btnDenunciar { background: #f44336; color: white; display: none; }
 
-        .lista-jogadores {
-            position: fixed;
-            top: 65px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #555;
-            z-index: 5;
-            min-width: 130px;
-        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-        .jogador-item {
-            font-size: 13px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .jogador-item.vez-dele { color: #4caf50; text-shadow: 0 0 8px #4caf50; }
-
-        .badge-cartas {
-            background: #f44336;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-        }
-
-        /* --- CHAT --- */
+        /* Chat Flutuante */
+        #btnAbrirChat { position: fixed; bottom: 20px; right: 20px; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; background: #673ab7; color: white; z-index: 500; display: none; }
+        
         #containerChat {
-            position: fixed;
-            right: 15px;
-            bottom: 180px;
-            width: 260px;
-            height: 250px;
-            background: rgba(0, 0, 0, 0.95);
-            border: 2px solid #444;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            z-index: 1000;
+            position: fixed; bottom: 20px; right: 20px; width: 300px; height: 400px;
+            background: #2c2c2c; border-radius: 10px; border: 1px solid #555; display: flex; flex-direction: column;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5); z-index: 600;
+        }
+        #headerChat { padding: 10px; background: #673ab7; border-radius: 10px 10px 0 0; cursor: move; font-weight: bold; }
+        #mensagensChat { flex: 1; padding: 10px; overflow-y: auto; font-size: 0.9em; display: flex; flex-direction: column; gap: 5px; }
+        .msg-item { word-break: break-word; }
+        #inputArea { display: flex; padding: 5px; border-top: 1px solid #555; }
+        #campoMsg { flex: 1; padding: 5px; border-radius: 3px; border: none; background: #444; color: white; }
+
+        /* Modais */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: #333; padding: 20px; border-radius: 10px; text-align: center; max-width: 90%; }
+        .cores-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .btn-cor { width: 60px; height: 60px; border-radius: 50%; cursor: pointer; border: 2px solid white; }
+
+        /* --- NOVO: ESTILOS DO BOTÃO E JANELA DE REGRAS --- */
+        #btnVerRegras {
+            position: fixed; top: 80px; right: 20px;
+            background: linear-gradient(45deg, #FFC107, #FF9800);
+            color: #fff; border: none; padding: 10px 20px;
+            border-radius: 50px; font-weight: bold;
+            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+            cursor: pointer; z-index: 900; transition: transform 0.2s;
+            font-family: sans-serif; display: flex; align-items: center; gap: 8px;
+        }
+        #btnVerRegras:hover { transform: scale(1.1); filter: brightness(1.1); }
+
+        .modal-overlay-regras {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); z-index: 1000;
+            align-items: center; justify-content: center; backdrop-filter: blur(3px);
         }
 
-        #headerChat {
-            background: #333;
-            padding: 8px;
-            text-align: center;
-            font-size: 10px;
-            cursor: move;
-            border-radius: 10px 10px 0 0;
-            user-select: none;
-            color: #aaa;
+        .modal-box-regras {
+            background: #1e1e1e; width: 90%; max-width: 400px;
+            border-radius: 20px; border: 2px solid #FFC107;
+            box-shadow: 0 0 30px rgba(255, 193, 7, 0.3); overflow: hidden;
+            animation: abrirJanela 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        #mensagensChat {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-            font-family: sans-serif;
-            font-size: 13px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
+        @keyframes abrirJanela {
+            from { transform: scale(0.5) translateY(50px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
         }
 
-        .msg-item { line-height: 1.4; border-bottom: 1px solid #222; padding-bottom: 2px; }
-        .msg-item b { color: #ffeb3b; }
-
-        #inputChatArea {
-            display: flex;
-            padding: 8px;
-            background: #111;
-            border-radius: 0 0 12px 12px;
+        .modal-header-regras {
+            background: linear-gradient(90deg, #FFC107, #FF9800);
+            padding: 15px; display: flex; justify-content: space-between; align-items: center;
         }
-
-        #campoMsg {
-            flex: 1;
-            background: #222;
-            border: 1px solid #444;
-            color: white;
-            padding: 6px;
-            border-radius: 5px;
-            outline: none;
+        .modal-header-regras h3 { margin: 0; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+        .btn-fechar-regras { cursor: pointer; font-size: 1.2rem; color: white; transition: 0.2s; }
+        .btn-fechar-regras:hover { transform: rotate(90deg); }
+        
+        .modal-body-regras { padding: 20px; max-height: 60vh; overflow-y: auto; }
+        .item-regra {
+            background: #2c2c2c; margin-bottom: 10px; padding: 12px;
+            border-radius: 10px; border-left: 5px solid #4CAF50;
+            display: flex; justify-content: space-between; align-items: center; color: white;
         }
-
-        #btnAbrirChat {
-            position: fixed;
-            right: 15px;
-            bottom: 160px;
-            background: #2196f3;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 50px;
-            font-size: 24px;
-            z-index: 1001;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            cursor: pointer;
-            display: none;
+        .info-wrapper { position: relative; display: inline-block; }
+        .info-icon {
+            background: rgba(255,255,255,0.2); color: #fff; width: 24px; height: 24px;
+            border-radius: 50%; text-align: center; line-height: 24px;
+            font-size: 14px; font-weight: bold; font-family: serif; font-style: italic;
+            cursor: help; border: 1px solid rgba(255,255,255,0.5);
         }
-
-        @media (max-width: 768px) {
-            #containerChat {
-                display: none;
-                width: 230px;
-                height: 220px;
-                right: 10px;
-                bottom: 220px;
-            }
-            #containerChat.aberto { display: flex; }
-            #btnAbrirChat { display: block; }
+        .tooltip-text {
+            visibility: hidden; width: 200px; background-color: #333; color: #fff;
+            text-align: center; border-radius: 6px; padding: 10px;
+            position: absolute; z-index: 1; bottom: 135%; left: 50%; margin-left: -100px;
+            opacity: 0; transition: opacity 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            border: 1px solid #FFC107; font-size: 0.85rem; pointer-events: none;
         }
-
-        /* --- JOGO --- */
-        .area-central {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            padding-bottom: 160px; 
+        .tooltip-text::after {
+            content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px;
+            border-width: 5px; border-style: solid; border-color: #333 transparent transparent transparent;
         }
+        .info-wrapper:hover .tooltip-text { visibility: visible; opacity: 1; }
 
-        #txtVez { font-size: 1.1rem; text-align: center; min-height: 45px; }
-
-        .mesa-display { display: flex; align-items: center; gap: 20px; }
-        #cartaMesa img { width: 110px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
-
-        .botoes-acao { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        #btnComprar { background: none; border: none; cursor: pointer; color: white; }
-        #btnComprar img { width: 85px; border-radius: 8px; border: 2px solid white; }
-
-        .btn-extra {
-            padding: 10px 15px; border-radius: 8px; border: 2px solid white;
-            font-weight: bold; cursor: pointer; display: none; width: 130px; text-align: center;
+        @media (max-width: 600px) {
+            #listaJogadores { display: none; } /* Mobile esconde lista lateral */
+            #containerChat { width: 90%; height: 50%; bottom: 80px; left: 5%; display: none; }
+            #btnAbrirChat { display: flex; justify-content: center; align-items: center; }
+            #minhaMao { height: 120px; }
+            .carta-slot img { width: 70px; height: 105px; }
         }
-
-        #btnUno { background: #ff9800; color: white; }
-        #btnPassar { background: #607d8b; color: white; }
-        #btnDenunciar { background: #f44336; color: white; animation: pulse 1s infinite; }
-
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-        #telaVitoria {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 2000; display: none;
-            flex-direction: column; align-items: center; justify-content: center;
-        }
-
-        .mao-container {
-            background: rgba(0,0,0,0.85); width: 100%; padding: 25px 0 45px 0;
-            position: fixed; bottom: 0; border-top: 3px solid rgba(255,255,255,0.1);
-            z-index: 100; overflow-x: auto; white-space: nowrap;
-        }
-
-        #minhaMao { display: inline-flex; padding: 0 60px; }
-        .carta-slot { display: inline-block; margin-left: -35px; transition: 0.2s; }
-        .carta-slot img { width: 95px; border: 1.5px solid white; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="telaVitoria">
-        <h1 id="txtVencedor">VENCEU!</h1>
-        <button onclick="location.reload()" style="padding:15px; background:#4caf50; color:white; border-radius:10px; border:none; font-weight:bold; cursor:pointer;">JOGAR NOVAMENTE</button>
-        <button onclick="window.location.href='index.html'" style="margin-top:10px; padding:10px; background:#2196f3; color:white; border:none; border-radius:10px; cursor:pointer;">SAIR</button>
-    </div>
+    <div id="listaJogadores">
+        <h3>Jogadores</h3>
+        </div>
 
-    <div class="topo">
-        <span>SALA: <b id="txtSalaID">---</b></span>
-        <button id="btnSair" class="btn-sair">SAIR</button>
-    </div>
+    <div id="areaJogo">
+        <div id="topoJogo">
+            <span>Sala: <b id="txtSalaID">...</b></span>
+            <span id="txtVez">Carregando...</span>
+            <button id="btnSair" style="background:#f44336; color:white;">Sair</button>
+        </div>
 
-    <div class="lista-jogadores" id="listaJogadores"></div>
+        <div id="mesa">
+            <div id="cartaMesa"></div>
+            
+            <div class="controles">
+                <button id="btnComprar" class="btn-acao">Comprar +1</button>
+                <button id="btnPassar" class="btn-acao">Passar Vez</button>
+                <button id="btnUno">UNO!</button>
+                <button id="btnDenunciar">DENUNCIAR!</button>
+            </div>
+        </div>
+
+        <div id="minhaMao">
+            </div>
+    </div>
 
     <div id="btnAbrirChat">💬</div>
     <div id="containerChat">
-        <div id="headerChat">⠿ ARRASTAR CHAT</div>
+        <div id="headerChat">Bate-papo</div>
         <div id="mensagensChat"></div>
-        <div id="inputChatArea">
-            <input type="text" id="campoMsg" placeholder="Chat..." autocomplete="off">
+        <div id="inputArea">
+            <input type="text" id="campoMsg" placeholder="Digite...">
         </div>
     </div>
 
-    <div class="area-central">
-        <div id="txtVez">Aguardando...</div>
-        <div class="mesa-display">
-            <div class="botoes-acao">
-                <div id="btnUno" class="btn-extra">UNO!</div>
-                <div id="btnDenunciar" class="btn-extra">DESAFIAR</div>
-                <div id="btnComprar">
-                    <img src="cartas/jota.png" alt="Baralho">
-                    <div style="font-size: 11px; font-weight: bold;">COMPRAR</div>
-                </div>
-                <div id="btnPassar" class="btn-extra">PASSAR VEZ</div>
+    <div id="modalCores" class="modal">
+        <div class="modal-content">
+            <h3>Escolha a Cor</h3>
+            <div class="cores-grid">
+                <div class="btn-cor" style="background:red" onclick="escolherNovaCor('red')"></div>
+                <div class="btn-cor" style="background:blue" onclick="escolherNovaCor('blue')"></div>
+                <div class="btn-cor" style="background:green" onclick="escolherNovaCor('green')"></div>
+                <div class="btn-cor" style="background:yellow" onclick="escolherNovaCor('yellow')"></div>
             </div>
-            <div id="cartaMesa"></div>
         </div>
     </div>
 
-    <div class="mao-container">
-        <div id="minhaMao"></div>
-    </div>
-
-    <div id="modalCores" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; flex-direction:column; justify-content:center; align-items:center;">
-        <h2 style="color:white; margin-bottom:20px;">ESCOLHA A COR</h2>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-            <button onclick="escolherNovaCor('red')" style="background:#f44336; width:80px; height:80px; border:2px solid white; border-radius:10px; cursor:pointer;"></button>
-            <button onclick="escolherNovaCor('blue')" style="background:#2196f3; width:80px; height:80px; border:2px solid white; border-radius:10px; cursor:pointer;"></button>
-            <button onclick="escolherNovaCor('green')" style="background:#4caf50; width:80px; height:80px; border:2px solid white; border-radius:10px; cursor:pointer;"></button>
-            <button onclick="escolherNovaCor('yellow')" style="background:#ffeb3b; width:80px; height:80px; border:2px solid white; border-radius:10px; cursor:pointer;"></button>
+    <div id="modalDesafio" class="modal">
+        <div class="modal-content" style="border: 2px solid orange;">
+            <h3 style="color: orange;">⚠️ DESAFIO +4 ⚠️</h3>
+            <p>Jogaram um +4 em você!</p>
+            <p style="font-size: 0.9em; color: #ccc;">Se você acha que o jogador tinha a cor da mesa na mão, DESAFIE!</p>
+            <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+                <button onclick="responderDesafio(false)" style="background:#4caf50; color:white;">Aceitar (+4)</button>
+                <button onclick="responderDesafio(true)" style="background:#f44336; color:white;">Desafiar!</button>
+            </div>
         </div>
     </div>
 
-    <div id="modalDesafio" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:6000; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
-        <h2 style="color:#ffeb3b;">DESAFIO +4!</h2>
-        <p style="color:white; max-width:300px; margin-bottom:20px;">O jogador anterior jogou um +4. Deseja desafiar se ele tinha a cor na mão?</p>
-        <div style="display:flex; gap:15px;">
-            <button onclick="responderDesafio(true)" style="padding:15px; background:#f44336; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">DESAFIAR</button>
-            <button onclick="responderDesafio(false)" style="padding:15px; background:#4caf50; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">ACEITAR +4</button>
+    <div id="telaVitoria" class="modal" style="background: rgba(0,0,0,0.95);">
+        <div class="modal-content">
+            <h1 id="txtVencedor" style="color: gold; font-size: 3em;"></h1>
+            <button onclick="location.href='index.html'" style="margin-top:20px; font-size:1.2em;">Voltar ao Menu</button>
+        </div>
+    </div>
+
+    <button id="btnVerRegras" onclick="abrirModalRegras()">
+        📜 REGRAS
+    </button>
+
+    <div id="modalRegrasOverlay" class="modal-overlay-regras" onclick="fecharModalRegras(event)">
+        <div class="modal-box-regras">
+            <div class="modal-header-regras">
+                <h3>📜 REGRAS DA SALA</h3>
+                <span class="btn-fechar-regras" onclick="fecharModalRegras(null)">✖</span>
+            </div>
+            
+            <div id="conteudoRegras" class="modal-body-regras">
+                <p style="color: #888; text-align: center;">Carregando regras...</p>
+            </div>
         </div>
     </div>
 
     <script type="module" src="jogo.js"></script>
+    <script>
+        // Funções simples para abrir/fechar o modal de regras
+        function abrirModalRegras() {
+            document.getElementById('modalRegrasOverlay').style.display = 'flex';
+        }
+        
+        function fecharModalRegras(e) {
+            // Fecha se clicar no X (e=null) ou fora da janela
+            if (e === null || e.target.id === 'modalRegrasOverlay') {
+                document.getElementById('modalRegrasOverlay').style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>
