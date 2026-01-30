@@ -255,6 +255,15 @@
         </div>
     </div>
 
+    <div id="modalDesafio" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:6000; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+        <h2 style="color:#ffeb3b;">DESAFIO +4!</h2>
+        <p style="color:white; max-width:300px; margin-bottom:20px;">O jogador anterior jogou um +4. Deseja desafiar se ele tinha a cor na mão?</p>
+        <div style="display:flex; gap:15px;">
+            <button onclick="responderDesafio(true)" style="padding:15px; background:#f44336; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">DESAFIAR</button>
+            <button onclick="responderDesafio(false)" style="padding:15px; background:#4caf50; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">ACEITAR +4</button>
+        </div>
+    </div>
+
     <script type="module" src="jogo.js"></script>
 </body>
 </html>
