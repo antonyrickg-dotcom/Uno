@@ -1,269 +1,174 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNO TFM - Mesa</title>
-    <style>
-        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #222; color: white; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* Layout Principal */
-        #listaJogadores { width: 200px; background: #333; padding: 10px; display: flex; flex-direction: column; gap: 10px; border-right: 2px solid #444; }
-        .jogador-item { padding: 10px; background: #444; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
-        .vez-dele { border: 2px solid #4caf50; box-shadow: 0 0 10px #4caf50; }
-        .badge-cartas { font-size: 0.9em; background: #555; padding: 2px 5px; border-radius: 4px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNO TFM - Mesa</title>
 
-        #areaJogo { flex: 1; display: flex; flex-direction: column; position: relative; }
-        #topoJogo { height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; background: #2a2a2a; border-bottom: 2px solid #444; }
-        
-        #mesa { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; background: radial-gradient(circle, #3a3a3a, #222); position: relative; }
-        
-        #cartaMesa img { width: 120px; height: 180px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        
-        #minhaMao { height: 160px; display: flex; gap: -40px; justify-content: center; align-items: center; padding: 10px; overflow-x: auto; background: rgba(0,0,0,0.3); }
-        .carta-slot { transition: transform 0.2s; cursor: pointer; margin-left: -30px; }
-        .carta-slot:first-child { margin-left: 0; }
-        .carta-slot:hover { transform: translateY(-20px) scale(1.1); z-index: 10; }
-        .carta-slot img { width: 90px; height: 135px; border-radius: 8px; box-shadow: -2px 0 5px rgba(0,0,0,0.3); }
+<style>
+body{
+    margin:0;font-family:Segoe UI,Tahoma,Verdana,sans-serif;
+    background:#222;color:white;display:flex;height:100vh;overflow:hidden
+}
 
-        /* Botões de Ação */
-        .controles { position: absolute; bottom: 180px; display: flex; gap: 10px; z-index: 100; }
-        button { padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-acao { background: #2196f3; color: white; }
-        .btn-acao:hover { background: #1976d2; }
-        #btnUno { background: #ff9800; color: white; display: none; animation: pulse 1s infinite; }
-        #btnPassar { background: #9e9e9e; display: none; }
-        #btnDenunciar { background: #f44336; color: white; display: none; }
+/* --- layout base (igual ao seu) --- */
+#listaJogadores{width:200px;background:#333;padding:10px;border-right:2px solid #444}
+#areaJogo{flex:1;display:flex;flex-direction:column}
+#topoJogo{height:60px;display:flex;justify-content:space-between;align-items:center;padding:0 20px;background:#2a2a2a;border-bottom:2px solid #444}
+#mesa{flex:1;display:flex;justify-content:center;align-items:center;position:relative}
+#minhaMao{height:160px}
 
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+/* --- botão regras --- */
+#btnVerRegras{
+    position:fixed;top:80px;right:20px;
+    background:#e6c9a8;border:3px solid #5d4037;
+    padding:8px 15px;border-radius:8px;
+    font-weight:bold;color:#5d4037;cursor:pointer;
+    z-index:999
+}
 
-        /* Chat Flutuante */
-        #btnAbrirChat { position: fixed; bottom: 20px; right: 20px; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; background: #673ab7; color: white; z-index: 500; display: none; }
-        
-        #containerChat {
-            position: fixed; bottom: 20px; right: 20px; width: 300px; height: 400px;
-            background: #2c2c2c; border-radius: 10px; border: 1px solid #555; display: flex; flex-direction: column;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5); z-index: 600;
-        }
-        #headerChat { padding: 10px; background: #673ab7; border-radius: 10px 10px 0 0; cursor: move; font-weight: bold; }
-        #mensagensChat { flex: 1; padding: 10px; overflow-y: auto; font-size: 0.9em; display: flex; flex-direction: column; gap: 5px; }
-        .msg-item { word-break: break-word; }
-        #inputArea { display: flex; padding: 5px; border-top: 1px solid #555; }
-        #campoMsg { flex: 1; padding: 5px; border-radius: 3px; border: none; background: #444; color: white; }
+/* ===================== */
+/* PERGAMINHO DE VERDADE */
+/* ===================== */
 
-        /* Modais Padrão */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #333; padding: 20px; border-radius: 10px; text-align: center; max-width: 90%; }
-        .cores-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .btn-cor { width: 60px; height: 60px; border-radius: 50%; cursor: pointer; border: 2px solid white; }
+.p-overlay{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,.85);
+    display:none;align-items:center;justify-content:center;
+    z-index:2000
+}
 
-        /* --- NOVO: ESTILO PERGAMINHO --- */
-        #btnVerRegras {
-            position: fixed; top: 80px; right: 20px;
-            background: #e6c9a8; border: 3px solid #5d4037;
-            padding: 8px 15px; border-radius: 8px;
-            font-weight: bold; color: #5d4037;
-            cursor: pointer; z-index: 900;
-            display: flex; align-items: center; gap: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-        }
+.pergaminho-container{
+    width:360px;
+    transform-origin:center;
+}
 
-        .p-overlay {
-            display: none; position: fixed; top: 0; left: 0; 
-            width: 100%; height: 100%; background: rgba(0,0,0,0.85);
-            z-index: 2000; align-items: center; justify-content: center;
-        }
+.pergaminho-img{
+    width:100%;
+    display:block;
+}
 
-        .pergaminho-container {
-            display: none; width: 340px; position: relative;
-            transform-origin: center;
-        }
+/* animação */
+.animar-abrir{
+    animation:abrirPergaminho .6s ease-out forwards;
+}
 
-        /* Animação de abrir (Expande X depois Y) */
-        .animar-abrir {
-            display: block !important;
-            animation: abrirPergaminhoAnim 0.5s ease-out forwards;
-        }
+@keyframes abrirPergaminho{
+    0%{transform:scaleX(.05) scaleY(.1);opacity:0}
+    50%{transform:scaleX(1) scaleY(.15);opacity:1}
+    100%{transform:scale(1)}
+}
 
-        @keyframes abrirPergaminhoAnim {
-            0% { transform: scaleX(0.1) scaleY(0.1); opacity: 0; }
-            50% { transform: scaleX(1) scaleY(0.1); opacity: 1; }
-            100% { transform: scaleX(1) scaleY(1); }
-        }
+/* conteúdo em cima da imagem */
+.pergaminho-conteudo{
+    position:absolute;
+    inset:40px 30px;
+    color:#4e342e;
+    overflow-y:auto;
+}
 
-        .pergaminho-papel {
-            background: #f4e4bc url('https://www.transparenttextures.com/patterns/parchment.png');
-            padding: 30px; border-left: 12px solid #d2b48c; border-right: 12px solid #d2b48c;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8); min-height: 380px; color: #4e342e; position: relative;
-        }
+.regra-link{
+    background:rgba(93,64,55,.15);
+    margin:8px 0;padding:10px;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:bold;
+    text-align:center;
+}
+.regra-link:hover{background:#5d4037;color:#f4e4bc}
 
-        .pergaminho-papel::before, .pergaminho-papel::after {
-            content: ""; position: absolute; left: -18px; right: -18px;
-            height: 22px; background: #5d4037; border-radius: 10px;
-        }
-        .pergaminho-papel::before { top: -10px; }
-        .pergaminho-papel::after { bottom: -10px; }
-
-        .p-header h2 { text-align: center; font-family: 'Georgia', serif; border-bottom: 2px solid #5d4037; margin: 0 0 15px 0; font-size: 1.4rem; }
-        .p-fechar { position: absolute; top: 8px; right: 8px; cursor: pointer; font-weight: bold; }
-
-        .regra-link {
-            background: rgba(93, 64, 55, 0.1); margin: 8px 0; padding: 12px;
-            border-radius: 5px; cursor: pointer; border: 1px dashed #5d4037;
-            font-weight: bold; text-align: center; transition: 0.2s;
-        }
-        .regra-link:hover { background: #5d4037; color: #f4e4bc; }
-
-        .detalhe-header { color: #b71c1c; font-size: 1.3rem; text-align: center; font-weight: bold; margin-bottom: 15px; }
-        .detalhe-icon { font-size: 3.5rem; text-align: center; margin: 10px 0; }
-        .btn-voltar-p {
-            display: block; width: 100%; margin-top: 20px;
-            background: #5d4037; color: white; border: none;
-            padding: 8px; cursor: pointer; font-family: serif;
-        }
-
-        @media (max-width: 600px) {
-            #listaJogadores { display: none; }
-            #containerChat { width: 90%; height: 50%; bottom: 80px; left: 5%; display: none; }
-            #btnAbrirChat { display: flex; justify-content: center; align-items: center; }
-            #minhaMao { height: 120px; }
-            .carta-slot img { width: 70px; height: 105px; }
-        }
-    </style>
+.btn-voltar{
+    margin-top:15px;
+    width:100%;
+    padding:8px;
+    border:none;
+    background:#5d4037;
+    color:white;
+    cursor:pointer;
+}
+</style>
 </head>
+
 <body>
 
-    <div id="listaJogadores">
-        <h3>Jogadores</h3>
-    </div>
+<div id="listaJogadores"><h3>Jogadores</h3></div>
 
-    <div id="areaJogo">
-        <div id="topoJogo">
-            <span>Sala: <b id="txtSalaID">...</b></span>
-            <span id="txtVez">Carregando...</span>
-            <button id="btnSair" style="background:#f44336; color:white;">Sair</button>
+<div id="areaJogo">
+    <div id="topoJogo">
+        <span>Sala: <b id="txtSalaID">...</b></span>
+        <span id="txtVez">Carregando...</span>
+        <button id="btnSair" style="background:#f44336;color:white">Sair</button>
+    </div>
+    <div id="mesa"></div>
+    <div id="minhaMao"></div>
+</div>
+
+<button id="btnVerRegras" onclick="abrirPergaminho()">📜 REGRAS</button>
+
+<!-- OVERLAY -->
+<div id="overlayPergaminho" class="p-overlay" onclick="fecharPergaminho(event)">
+
+    <div id="pergaminho" class="pergaminho-container">
+        <img id="imgPergaminho" class="pergaminho-img" src="pergaminho/fechado.png">
+
+        <div id="conteudoLista" class="pergaminho-conteudo" style="display:none">
+            <div class="regra-link" onclick="mostrarDetalhe('Sem Desafiar')">Sem Desafiar</div>
+            <div class="regra-link" onclick="mostrarDetalhe('Acumular +2')">Acumular +2</div>
+            <div class="regra-link" onclick="mostrarDetalhe('7 Roda a Mão')">7 Roda a Mão</div>
+            <div class="regra-link" onclick="mostrarDetalhe('0 Troca Tudo')">0 Troca Tudo</div>
         </div>
 
-        <div id="mesa">
-            <div id="cartaMesa"></div>
-            
-            <div class="controles">
-                <button id="btnComprar" class="btn-acao">Comprar +1</button>
-                <button id="btnPassar" class="btn-acao">Passar Vez</button>
-                <button id="btnUno">UNO!</button>
-                <button id="btnDenunciar">DENUNCIAR!</button>
-            </div>
-        </div>
-
-        <div id="minhaMao"></div>
-    </div>
-
-    <div id="btnAbrirChat">💬</div>
-    <div id="containerChat">
-        <div id="headerChat">Bate-papo</div>
-        <div id="mensagensChat"></div>
-        <div id="inputArea">
-            <input type="text" id="campoMsg" placeholder="Digite...">
-        </div>
-    </div>
-
-    <div id="modalCores" class="modal">
-        <div class="modal-content">
-            <h3>Escolha a Cor</h3>
-            <div class="cores-grid">
-                <div class="btn-cor" style="background:red" onclick="escolherNovaCor('red')"></div>
-                <div class="btn-cor" style="background:blue" onclick="escolherNovaCor('blue')"></div>
-                <div class="btn-cor" style="background:green" onclick="escolherNovaCor('green')"></div>
-                <div class="btn-cor" style="background:yellow" onclick="escolherNovaCor('yellow')"></div>
-            </div>
+        <div id="conteudoDetalhe" class="pergaminho-conteudo" style="display:none">
+            <h3 id="tituloRegra"></h3>
+            <p id="textoRegra"></p>
+            <button class="btn-voltar" onclick="voltarLista()">VOLTAR</button>
         </div>
     </div>
+</div>
 
-    <div id="modalDesafio" class="modal">
-        <div class="modal-content" style="border: 2px solid orange;">
-            <h3 style="color: orange;">⚠️ DESAFIO +4 ⚠️</h3>
-            <p>Jogaram um +4 em você!</p>
-            <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
-                <button onclick="responderDesafio(false)" style="background:#4caf50; color:white;">Aceitar (+4)</button>
-                <button onclick="responderDesafio(true)" style="background:#f44336; color:white;">Desafiar!</button>
-            </div>
-        </div>
-    </div>
+<script type="module" src="jogo.js"></script>
 
-    <div id="telaVitoria" class="modal" style="background: rgba(0,0,0,0.95);">
-        <div class="modal-content">
-            <h1 id="txtVencedor" style="color: gold; font-size: 3em;"></h1>
-            <button onclick="location.href='index.html'" style="margin-top:20px; font-size:1.2em;">Voltar ao Menu</button>
-        </div>
-    </div>
+<script>
+const overlay = document.getElementById('overlayPergaminho');
+const perg = document.getElementById('pergaminho');
+const img = document.getElementById('imgPergaminho');
+const lista = document.getElementById('conteudoLista');
+const detalhe = document.getElementById('conteudoDetalhe');
 
-    <button id="btnVerRegras" onclick="abrirPergaminho()">
-        📜 REGRAS
-    </button>
+function abrirPergaminho(){
+    overlay.style.display='flex';
+    img.src='pergaminho/aberto.png';
+    perg.classList.add('animar-abrir');
+    setTimeout(()=>lista.style.display='block',300);
+}
 
-    <div id="pergaminhoOverlay" class="p-overlay" onclick="fecharPergaminho(event)">
-        
-        <div id="pergaminhoLista" class="pergaminho-container">
-            <div class="pergaminho-papel">
-                <div class="p-header">
-                    <h2>Regras da Sala</h2>
-                    <span class="p-fechar" onclick="fecharPergaminho(null)">✖</span>
-                </div>
-                <div id="listaRegrasScroll" class="p-body">
-                    </div>
-            </div>
-        </div>
+function fecharPergaminho(e){
+    if(e.target!==overlay) return;
+    overlay.style.display='none';
+    perg.classList.remove('animar-abrir');
+    img.src='pergaminho/fechado.png';
+    lista.style.display='none';
+    detalhe.style.display='none';
+}
 
-        <div id="pergaminhoDetalhe" class="pergaminho-container">
-            <div class="pergaminho-papel">
-                <div id="conteudoDetalheRegra" class="p-body">
-                    </div>
-                <button class="btn-voltar-p" onclick="voltarParaLista()">VOLTAR</button>
-            </div>
-        </div>
-    </div>
+function mostrarDetalhe(nome){
+    const regras={
+        'Sem Desafiar':'O +4 é absoluto.',
+        'Acumular +2':'+2 pode empilhar.',
+        '7 Roda a Mão':'Todos passam as cartas.',
+        '0 Troca Tudo':'Troca geral de mãos.'
+    };
+    lista.style.display='none';
+    detalhe.style.display='block';
+    document.getElementById('tituloRegra').innerText=nome;
+    document.getElementById('textoRegra').innerText=regras[nome];
+}
 
-    <script type="module" src="jogo.js"></script>
-    <script>
-        function abrirPergaminho() {
-            document.getElementById('pergaminhoOverlay').style.display = 'flex';
-            document.getElementById('pergaminhoLista').classList.add('animar-abrir');
-        }
+function voltarLista(){
+    detalhe.style.display='none';
+    lista.style.display='block';
+}
+</script>
 
-        function fecharPergaminho(e) {
-            if (e === null || e.target.id === 'pergaminhoOverlay') {
-                document.getElementById('pergaminhoOverlay').style.display = 'none';
-                document.getElementById('pergaminhoLista').classList.remove('animar-abrir');
-                document.getElementById('pergaminhoDetalhe').classList.remove('animar-abrir');
-                document.getElementById('pergaminhoLista').style.display = 'none';
-                document.getElementById('pergaminhoDetalhe').style.display = 'none';
-            }
-        }
-
-        window.mostrarDetalheRegra = (regra) => {
-            const explicacoes = {
-                'Sem Desafiar': { t: 'SEM DESAFIO', i: '🚫', d: 'O +4 é absoluto. O alvo deve comprar as 4 cartas sem direito a desafiar.' },
-                'Acumular +2': { t: 'ACUMULAR +2', i: '➕', d: 'Responda um +2 com outro +2 para somar a punição ao próximo jogador.' },
-                '7 Roda a Mão': { t: '7 RODA A MÃO', i: '🔄', d: 'Ao jogar um 7, todos passam as cartas para o jogador ao lado.' },
-                '0 Troca Tudo': { t: '0 TROCA TUDO', i: '🤝', d: 'Ao jogar um 0, você pode escolher alguém para trocar de mão com você.' }
-            };
-
-            const info = explicacoes[regra] || { t: regra, i: '📜', d: 'Regra especial ativa nesta partida.' };
-            document.getElementById('conteudoDetalheRegra').innerHTML = `
-                <div class="detalhe-header">${info.t}</div>
-                <div class="detalhe-icon">${info.i}</div>
-                <p style="text-align:center; line-height:1.5">${info.d}</p>
-            `;
-
-            document.getElementById('pergaminhoLista').style.display = 'none';
-            document.getElementById('pergaminhoDetalhe').classList.add('animar-abrir');
-        };
-
-        function voltarParaLista() {
-            document.getElementById('pergaminhoDetalhe').classList.remove('animar-abrir');
-            document.getElementById('pergaminhoDetalhe').style.display = 'none';
-            document.getElementById('pergaminhoLista').style.display = 'block';
-        }
-    </script>
 </body>
 </html>
