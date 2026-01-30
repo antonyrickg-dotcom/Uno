@@ -20,6 +20,8 @@ let cartaPendente = null;
 let indicePendente = null;
 // Variável para evitar múltiplos disparos do timer automático
 let processandoAutoCompra = false; 
+// VARIÁVEL PARA CONTROLE DA ANIMAÇÃO
+let ultimaCartaId = null;
 
 if (!salaID || !meuNick) window.location.href = "index.html";
 document.getElementById('txtSalaID').innerText = salaID;
@@ -168,7 +170,21 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
 
     // Atualiza interface da mesa
     document.getElementById('txtVez').innerHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ!</b>` : `Vez de ${dados.turno}`;
-    if (dados.cartaNaMesa) document.getElementById('cartaMesa').innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
+    
+    // --- LÓGICA DA ANIMAÇÃO DA CARTA NA MESA ---
+    if (dados.cartaNaMesa) {
+        const mesaDiv = document.getElementById('cartaMesa');
+        const cartaAtualId = JSON.stringify(dados.cartaNaMesa);
+        
+        if (cartaAtualId !== ultimaCartaId) {
+            // Se a carta mudou, renderiza com a classe de animação
+            mesaDiv.innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}" class="animar-carta">`;
+            ultimaCartaId = cartaAtualId;
+        } else {
+            // Se for apenas atualização de turno, mantém sem disparar animação de novo
+            mesaDiv.innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
+        }
+    }
 
     // Renderizar Minha Mão
     const minhaMaoDiv = document.getElementById('minhaMao');
