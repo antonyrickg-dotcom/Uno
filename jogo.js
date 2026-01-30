@@ -456,3 +456,94 @@ document.getElementById('btnPassar').onclick = async () => {
 };
 
 document.getElementById('btnSair').onclick = () => window.location.href = "index.html";
+// =====================================================
+// 📜 SISTEMA DE PERGAMINHO CINEMATOGRÁFICO (APENAS UI)
+// =====================================================
+
+// Guarda as regras atuais vindas do Firebase
+let regrasAtivasPergaminho = [];
+
+// Observa as regras da sala (não interfere no jogo)
+try {
+    const refRegrasPergaminho = ref(db, `salas/${salaID}/regras`);
+    onValue(refRegrasPergaminho, (snap) => {
+        const r = snap.val();
+        regrasAtivasPergaminho = r ? Object.values(r) : [];
+    });
+} catch (e) {
+    console.warn("Pergaminho: erro ao observar regras", e);
+}
+
+// Abre o overlay com o pergaminho fechado
+window.abrirPergaminho = () => {
+    const overlay = document.getElementById("pergaminhoOverlay");
+    const fechado = document.getElementById("pergaminhoFechado");
+    const aberto = document.getElementById("pergaminhoAberto");
+    const lista = document.getElementById("listaRegras");
+    const detalhe = document.getElementById("detalheRegra");
+
+    if (!overlay || !fechado || !aberto || !lista) {
+        console.warn("Pergaminho: elementos HTML não encontrados");
+        return;
+    }
+
+    overlay.classList.remove("hidden");
+    fechado.classList.remove("hidden");
+    aberto.classList.add("hidden");
+    if (detalhe) detalhe.classList.add("hidden");
+
+    lista.innerHTML = "";
+
+    if (regrasAtivasPergaminho.length === 0) {
+        lista.innerHTML = `<li class="regra-vazia">Nenhuma regra especial ativa</li>`;
+        return;
+    }
+
+    regrasAtivasPergaminho.forEach(regra => {
+        const li = document.createElement("li");
+        li.className = "item-regra";
+        li.textContent = regra.toUpperCase();
+        li.onclick = () => mostrarDetalheRegra(regra);
+        lista.appendChild(li);
+    });
+};
+
+// Clique no pergaminho fechado → animação de abrir
+window.abrirPergaminhoFechado = () => {
+    document.getElementById("pergaminhoFechado")?.classList.add("hidden");
+    document.getElementById("pergaminhoAberto")?.classList.remove("hidden");
+};
+
+// Fecha tudo
+window.fecharPergaminho = () => {
+    document.getElementById("pergaminhoOverlay")?.classList.add("hidden");
+};
+
+// Mostra explicação da regra clicada
+window.mostrarDetalheRegra = (regra) => {
+    const detalhe = document.getElementById("detalheRegra");
+    const titulo = document.getElementById("tituloRegra");
+    const texto = document.getElementById("textoRegra");
+
+    if (!detalhe || !titulo || !texto) return;
+
+    const explicacoes = {
+        'Sem Desafiar': 'O +4 se torna absoluto. Quem recebe compra 4 cartas imediatamente, sem direito a desafiar.',
+        'Acumular +2': 'Você pode jogar outro +2 para somar a penalidade e passar para o próximo.',
+        '7 Roda a Mão': 'Ao jogar um 7, todos os jogadores passam a mão para o jogador ao lado.',
+        '0 Troca Tudo': 'Ao jogar um 0, você pode escolher um jogador para trocar de mão.'
+    };
+
+    titulo.innerText = regra.toUpperCase();
+    texto.innerText = explicacoes[regra] || "Sem descrição disponível.";
+
+    detalhe.classList.remove("hidden");
+};
+
+// Liga automaticamente ao botão de regras, se existir
+window.addEventListener("DOMContentLoaded", () => {
+    const btnRegras = document.getElementById("btnRegras");
+    if (btnRegras) {
+        btnRegras.onclick = abrirPergaminho;
+    }
+});
