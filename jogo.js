@@ -18,6 +18,8 @@ const meuNick = localStorage.getItem('meuNick');
 
 let cartaPendente = null;
 let indicePendente = null;
+// Variável para evitar múltiplos disparos do timer automático
+let processandoAutoCompra = false; 
 
 if (!salaID || !meuNick) window.location.href = "index.html";
 document.getElementById('txtSalaID').innerText = salaID;
@@ -37,9 +39,7 @@ function gerarCarta() {
 
 function getNomeImagem(c) {
     if (!c) return '';
-    // Se for preta original, mostra a imagem preta (ex: wild.png)
     if (c.cor === 'black') return `cartas/${c.valor}.png`;
-    // Se era preta e foi pintada, mostra a carta pintada (ex: wild_red.png)
     if (c.originalCor === 'black') return `cartas/${c.valor}_${c.cor}.png`;
     
     const esp = ['skip', 'reverse', 'draw2'];
@@ -101,15 +101,43 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
     document.getElementById('btnUno').style.display = (isMinhaVez && mao.length === 2) ? 'block' : 'none';
     document.getElementById('btnPassar').style.display = (isMinhaVez && dados.comprouNaVez && (dados.acumulado || 0) === 0) ? 'block' : 'none';
     
-    // --- LÓGICA DO MODAL DE DESAFIO +4 ---
+    // --- LÓGICA DO MODAL DE DESAFIO +4 & REGRA "SEM DESAFIAR" ---
     const modalDesafio = document.getElementById('modalDesafio');
+    
+    // Verifica se a regra está ativa
+    const regrasAtivas = dados.regras ? Object.values(dados.regras) : [];
+    const regraSemDesafio = regrasAtivas.includes('Sem Desafiar');
+
     if (dados.statusMais4 === "pendente" && isMinhaVez) {
-        modalDesafio.style.display = 'flex';
-    } else if (modalDesafio) {
-        modalDesafio.style.display = 'none';
+        if (regraSemDesafio) {
+            // Se a regra estiver ON: Não mostra modal e aceita automático
+            if(modalDesafio) modalDesafio.style.display = 'none';
+            
+            if (!processandoAutoCompra) {
+                processandoAutoCompra = true;
+                // Toast ou log para avisar o jogador
+                console.log("Regra Sem Desafio ativa: Comprando +4 automaticamente...");
+                
+                setTimeout(() => {
+                    window.responderDesafio(false); // False = Aceitar o +4
+                    processandoAutoCompra = false;
+                }, 1500);
+            }
+        } else {
+            // Regra OFF: Mostra o modal para desafiar
+            if(modalDesafio) modalDesafio.style.display = 'flex';
+        }
+    } else {
+        if (modalDesafio) modalDesafio.style.display = 'none';
     }
 
-    // Botão Denunciar (Exemplo simplificado)
+    // Exibir alerta visual da regra (Opcional, se tiver a div no HTML)
+    const avisoRegra = document.getElementById('regraAtiva');
+    if(avisoRegra) {
+        avisoRegra.style.display = regraSemDesafio ? 'block' : 'none';
+    }
+
+    // Botão Denunciar
     const btnDenunciar = document.getElementById('btnDenunciar');
     if(btnDenunciar) {
         const vitima = nicks.find(n => dados.jogadores[n].esqueceuUno === true);
@@ -177,9 +205,14 @@ window.escolherNovaCor = async (cor) => {
 
 // --- FUNÇÃO DE RESPONDER DESAFIO +4 ---
 window.responderDesafio = async (desafiou) => {
-    document.getElementById('modalDesafio').style.display = 'none';
+    const modal = document.getElementById('modalDesafio');
+    if(modal) modal.style.display = 'none';
+
     const snap = await get(ref(db, `salas/${salaID}`));
     const d = snap.val();
+    
+    if(!d.statusMais4 || d.statusMais4 === "resolvido") return; // Evita duplo clique
+
     const atacante = d.quemJogouMais4;
     const corAnterior = d.corAntesDoMais4;
     let minhaMao = [...d.jogadores[meuNick].mao];
@@ -200,14 +233,20 @@ window.responderDesafio = async (desafiou) => {
             await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: minhaMao });
         }
     } else {
-        // Apenas aceitou o +4
+        // Apenas aceitou o +4 (Ou foi forçado pela regra)
         for(let i=0; i<4; i++) minhaMao.push(gerarCarta());
         await update(ref(db, `salas/${salaID}/jogadores/${meuNick}`), { mao: minhaMao });
     }
 
     const nicks = Object.keys(d.jogadores);
     const prox = calcProx(nicks.indexOf(meuNick), nicks.length, d.sentido, 1);
-    await update(ref(db, `salas/${salaID}`), { turno: nicks[prox], acumulado: 0, statusMais4: "resolvido" });
+    
+    await update(ref(db, `salas/${salaID}`), { 
+        turno: nicks[prox], 
+        acumulado: 0, 
+        statusMais4: "resolvido",
+        comprouNaVez: false // Garante que o próximo jogue limpo
+    });
 };
 
 async function processarJogada(carta, index, dados) {
@@ -308,9 +347,7 @@ let isDragging = false;
 let startX, startY, initialX, initialY;
 
 const startMove = (e) => {
-    // Só arrasta se clicar no header
     if(e.target.id !== 'headerChat') return;
-    
     isDragging = true;
     const pos = e.type.includes('touch') ? e.touches[0] : e;
     startX = pos.clientX;
@@ -321,14 +358,14 @@ const startMove = (e) => {
 
 const doMove = (e) => {
     if (!isDragging) return;
-    e.preventDefault(); // Evita scroll da tela enquanto arrasta
+    e.preventDefault(); 
     const pos = e.type.includes('touch') ? e.touches[0] : e;
     const dx = pos.clientX - startX;
     const dy = pos.clientY - startY;
     containerChat.style.left = (initialX + dx) + 'px';
     containerChat.style.top = (initialY + dy) + 'px';
-    containerChat.style.right = 'auto'; // Remove fixação à direita
-    containerChat.style.bottom = 'auto'; // Remove fixação embaixo
+    containerChat.style.right = 'auto'; 
+    containerChat.style.bottom = 'auto'; 
 };
 
 if(headerChat) {
@@ -356,7 +393,8 @@ document.getElementById('btnComprar').onclick = async () => {
         await update(ref(db, `salas/${salaID}`), { 
             [`jogadores/${meuNick}/mao`]: m, 
             acumulado: 0, 
-            turno: Object.keys(d.jogadores)[prox] 
+            turno: Object.keys(d.jogadores)[prox],
+            comprouNaVez: false // Reseta
         });
     } else {
         // Compra normal (1 carta)
