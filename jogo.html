@@ -51,78 +51,79 @@
         #inputArea { display: flex; padding: 5px; border-top: 1px solid #555; }
         #campoMsg { flex: 1; padding: 5px; border-radius: 3px; border: none; background: #444; color: white; }
 
-        /* Modais */
+        /* Modais Padrão */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: #333; padding: 20px; border-radius: 10px; text-align: center; max-width: 90%; }
         .cores-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
         .btn-cor { width: 60px; height: 60px; border-radius: 50%; cursor: pointer; border: 2px solid white; }
 
-        /* --- NOVO: ESTILOS DO BOTÃO E JANELA DE REGRAS --- */
+        /* --- NOVO: ESTILO PERGAMINHO --- */
         #btnVerRegras {
             position: fixed; top: 80px; right: 20px;
-            background: linear-gradient(45deg, #FFC107, #FF9800);
-            color: #fff; border: none; padding: 10px 20px;
-            border-radius: 50px; font-weight: bold;
-            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
-            cursor: pointer; z-index: 900; transition: transform 0.2s;
-            font-family: sans-serif; display: flex; align-items: center; gap: 8px;
-        }
-        #btnVerRegras:hover { transform: scale(1.1); filter: brightness(1.1); }
-
-        .modal-overlay-regras {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7); z-index: 1000;
-            align-items: center; justify-content: center; backdrop-filter: blur(3px);
+            background: #e6c9a8; border: 3px solid #5d4037;
+            padding: 8px 15px; border-radius: 8px;
+            font-weight: bold; color: #5d4037;
+            cursor: pointer; z-index: 900;
+            display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
 
-        .modal-box-regras {
-            background: #1e1e1e; width: 90%; max-width: 400px;
-            border-radius: 20px; border: 2px solid #FFC107;
-            box-shadow: 0 0 30px rgba(255, 193, 7, 0.3); overflow: hidden;
-            animation: abrirJanela 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        .p-overlay {
+            display: none; position: fixed; top: 0; left: 0; 
+            width: 100%; height: 100%; background: rgba(0,0,0,0.85);
+            z-index: 2000; align-items: center; justify-content: center;
         }
 
-        @keyframes abrirJanela {
-            from { transform: scale(0.5) translateY(50px); opacity: 0; }
-            to { transform: scale(1) translateY(0); opacity: 1; }
+        .pergaminho-container {
+            display: none; width: 340px; position: relative;
+            transform-origin: center;
         }
 
-        .modal-header-regras {
-            background: linear-gradient(90deg, #FFC107, #FF9800);
-            padding: 15px; display: flex; justify-content: space-between; align-items: center;
+        /* Animação de abrir (Expande X depois Y) */
+        .animar-abrir {
+            display: block !important;
+            animation: abrirPergaminhoAnim 0.5s ease-out forwards;
         }
-        .modal-header-regras h3 { margin: 0; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
-        .btn-fechar-regras { cursor: pointer; font-size: 1.2rem; color: white; transition: 0.2s; }
-        .btn-fechar-regras:hover { transform: rotate(90deg); }
-        
-        .modal-body-regras { padding: 20px; max-height: 60vh; overflow-y: auto; }
-        .item-regra {
-            background: #2c2c2c; margin-bottom: 10px; padding: 12px;
-            border-radius: 10px; border-left: 5px solid #4CAF50;
-            display: flex; justify-content: space-between; align-items: center; color: white;
+
+        @keyframes abrirPergaminhoAnim {
+            0% { transform: scaleX(0.1) scaleY(0.1); opacity: 0; }
+            50% { transform: scaleX(1) scaleY(0.1); opacity: 1; }
+            100% { transform: scaleX(1) scaleY(1); }
         }
-        .info-wrapper { position: relative; display: inline-block; }
-        .info-icon {
-            background: rgba(255,255,255,0.2); color: #fff; width: 24px; height: 24px;
-            border-radius: 50%; text-align: center; line-height: 24px;
-            font-size: 14px; font-weight: bold; font-family: serif; font-style: italic;
-            cursor: help; border: 1px solid rgba(255,255,255,0.5);
+
+        .pergaminho-papel {
+            background: #f4e4bc url('https://www.transparenttextures.com/patterns/parchment.png');
+            padding: 30px; border-left: 12px solid #d2b48c; border-right: 12px solid #d2b48c;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); min-height: 380px; color: #4e342e; position: relative;
         }
-        .tooltip-text {
-            visibility: hidden; width: 200px; background-color: #333; color: #fff;
-            text-align: center; border-radius: 6px; padding: 10px;
-            position: absolute; z-index: 1; bottom: 135%; left: 50%; margin-left: -100px;
-            opacity: 0; transition: opacity 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            border: 1px solid #FFC107; font-size: 0.85rem; pointer-events: none;
+
+        .pergaminho-papel::before, .pergaminho-papel::after {
+            content: ""; position: absolute; left: -18px; right: -18px;
+            height: 22px; background: #5d4037; border-radius: 10px;
         }
-        .tooltip-text::after {
-            content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px;
-            border-width: 5px; border-style: solid; border-color: #333 transparent transparent transparent;
+        .pergaminho-papel::before { top: -10px; }
+        .pergaminho-papel::after { bottom: -10px; }
+
+        .p-header h2 { text-align: center; font-family: 'Georgia', serif; border-bottom: 2px solid #5d4037; margin: 0 0 15px 0; font-size: 1.4rem; }
+        .p-fechar { position: absolute; top: 8px; right: 8px; cursor: pointer; font-weight: bold; }
+
+        .regra-link {
+            background: rgba(93, 64, 55, 0.1); margin: 8px 0; padding: 12px;
+            border-radius: 5px; cursor: pointer; border: 1px dashed #5d4037;
+            font-weight: bold; text-align: center; transition: 0.2s;
         }
-        .info-wrapper:hover .tooltip-text { visibility: visible; opacity: 1; }
+        .regra-link:hover { background: #5d4037; color: #f4e4bc; }
+
+        .detalhe-header { color: #b71c1c; font-size: 1.3rem; text-align: center; font-weight: bold; margin-bottom: 15px; }
+        .detalhe-icon { font-size: 3.5rem; text-align: center; margin: 10px 0; }
+        .btn-voltar-p {
+            display: block; width: 100%; margin-top: 20px;
+            background: #5d4037; color: white; border: none;
+            padding: 8px; cursor: pointer; font-family: serif;
+        }
 
         @media (max-width: 600px) {
-            #listaJogadores { display: none; } /* Mobile esconde lista lateral */
+            #listaJogadores { display: none; }
             #containerChat { width: 90%; height: 50%; bottom: 80px; left: 5%; display: none; }
             #btnAbrirChat { display: flex; justify-content: center; align-items: center; }
             #minhaMao { height: 120px; }
@@ -134,7 +135,7 @@
 
     <div id="listaJogadores">
         <h3>Jogadores</h3>
-        </div>
+    </div>
 
     <div id="areaJogo">
         <div id="topoJogo">
@@ -154,8 +155,7 @@
             </div>
         </div>
 
-        <div id="minhaMao">
-            </div>
+        <div id="minhaMao"></div>
     </div>
 
     <div id="btnAbrirChat">💬</div>
@@ -183,7 +183,6 @@
         <div class="modal-content" style="border: 2px solid orange;">
             <h3 style="color: orange;">⚠️ DESAFIO +4 ⚠️</h3>
             <p>Jogaram um +4 em você!</p>
-            <p style="font-size: 0.9em; color: #ccc;">Se você acha que o jogador tinha a cor da mesa na mão, DESAFIE!</p>
             <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
                 <button onclick="responderDesafio(false)" style="background:#4caf50; color:white;">Aceitar (+4)</button>
                 <button onclick="responderDesafio(true)" style="background:#f44336; color:white;">Desafiar!</button>
@@ -198,35 +197,72 @@
         </div>
     </div>
 
-    <button id="btnVerRegras" onclick="abrirModalRegras()">
+    <button id="btnVerRegras" onclick="abrirPergaminho()">
         📜 REGRAS
     </button>
 
-    <div id="modalRegrasOverlay" class="modal-overlay-regras" onclick="fecharModalRegras(event)">
-        <div class="modal-box-regras">
-            <div class="modal-header-regras">
-                <h3>📜 REGRAS DA SALA</h3>
-                <span class="btn-fechar-regras" onclick="fecharModalRegras(null)">✖</span>
+    <div id="pergaminhoOverlay" class="p-overlay" onclick="fecharPergaminho(event)">
+        
+        <div id="pergaminhoLista" class="pergaminho-container">
+            <div class="pergaminho-papel">
+                <div class="p-header">
+                    <h2>Regras da Sala</h2>
+                    <span class="p-fechar" onclick="fecharPergaminho(null)">✖</span>
+                </div>
+                <div id="listaRegrasScroll" class="p-body">
+                    </div>
             </div>
-            
-            <div id="conteudoRegras" class="modal-body-regras">
-                <p style="color: #888; text-align: center;">Carregando regras...</p>
+        </div>
+
+        <div id="pergaminhoDetalhe" class="pergaminho-container">
+            <div class="pergaminho-papel">
+                <div id="conteudoDetalheRegra" class="p-body">
+                    </div>
+                <button class="btn-voltar-p" onclick="voltarParaLista()">VOLTAR</button>
             </div>
         </div>
     </div>
 
     <script type="module" src="jogo.js"></script>
     <script>
-        // Funções simples para abrir/fechar o modal de regras
-        function abrirModalRegras() {
-            document.getElementById('modalRegrasOverlay').style.display = 'flex';
+        function abrirPergaminho() {
+            document.getElementById('pergaminhoOverlay').style.display = 'flex';
+            document.getElementById('pergaminhoLista').classList.add('animar-abrir');
         }
-        
-        function fecharModalRegras(e) {
-            // Fecha se clicar no X (e=null) ou fora da janela
-            if (e === null || e.target.id === 'modalRegrasOverlay') {
-                document.getElementById('modalRegrasOverlay').style.display = 'none';
+
+        function fecharPergaminho(e) {
+            if (e === null || e.target.id === 'pergaminhoOverlay') {
+                document.getElementById('pergaminhoOverlay').style.display = 'none';
+                document.getElementById('pergaminhoLista').classList.remove('animar-abrir');
+                document.getElementById('pergaminhoDetalhe').classList.remove('animar-abrir');
+                document.getElementById('pergaminhoLista').style.display = 'none';
+                document.getElementById('pergaminhoDetalhe').style.display = 'none';
             }
+        }
+
+        window.mostrarDetalheRegra = (regra) => {
+            const explicacoes = {
+                'Sem Desafiar': { t: 'SEM DESAFIO', i: '🚫', d: 'O +4 é absoluto. O alvo deve comprar as 4 cartas sem direito a desafiar.' },
+                'Acumular +2': { t: 'ACUMULAR +2', i: '➕', d: 'Responda um +2 com outro +2 para somar a punição ao próximo jogador.' },
+                '7 Roda a Mão': { t: '7 RODA A MÃO', i: '🔄', d: 'Ao jogar um 7, todos passam as cartas para o jogador ao lado.' },
+                '0 Troca Tudo': { t: '0 TROCA TUDO', i: '🤝', d: 'Ao jogar um 0, você pode escolher alguém para trocar de mão com você.' }
+            };
+
+            const info = explicacoes[regra] || { t: regra, i: '📜', d: 'Regra especial ativa nesta partida.' };
+            document.getElementById('conteudoDetalheRegra').innerHTML = `
+                <div class="detalhe-header">${info.t}</div>
+                <div class="detalhe-icon">${info.i}</div>
+                <p style="text-align:center; line-height:1.5">${info.d}</p>
+            `;
+
+            document.getElementById('pergaminhoLista').style.display = 'none';
+            document.getElementById('pergaminhoDetalhe').classList.add('animar-abrir');
+        };
+
+        function voltarParaLista() {
+            document.getElementById('pergaminhoDetalhe').classList.remove('animar-abrir');
+            document.getElementById('pergaminhoDetalhe').style.display = 'none';
+            document.getElementById('pergaminhoLista').style.display = 'block';
         }
     </script>
 </body>
