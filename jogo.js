@@ -131,12 +131,6 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
         if (modalDesafio) modalDesafio.style.display = 'none';
     }
 
-    // Exibir alerta visual da regra (Opcional, se tiver a div no HTML)
-    const avisoRegra = document.getElementById('regraAtiva');
-    if(avisoRegra) {
-        avisoRegra.style.display = regraSemDesafio ? 'block' : 'none';
-    }
-
     // Botão Denunciar
     const btnDenunciar = document.getElementById('btnDenunciar');
     if(btnDenunciar) {
@@ -144,6 +138,35 @@ onValue(ref(db, `salas/${salaID}`), async (snapshot) => {
         btnDenunciar.style.display = (vitima && vitima !== meuNick) ? 'block' : 'none';
     }
 
+    // --- ATUALIZAÇÃO DA JANELA DE REGRAS (NOVO) ---
+    const containerRegras = document.getElementById('conteudoRegras');
+    if (containerRegras) {
+        const explicacoes = {
+            'Sem Desafiar': 'O +4 torna-se uma carta absoluta. Quem o recebe é obrigado a comprar as 4 cartas imediatamente, sem direito a desafiar (bluff).',
+            'Acumular +2': 'Se jogarem um +2 em você, pode jogar outro +2 para passar a vez e somar a compra para o próximo.',
+            '7 Roda a Mão': 'Ao jogar um 7, todos devem passar suas cartas para o jogador ao lado.',
+            '0 Troca Tudo': 'Ao jogar um 0, você pode escolher alguém para trocar de mão com você.'
+        };
+
+        if (regrasAtivas.length === 0) {
+            containerRegras.innerHTML = "<p style='color:#aaa; text-align:center;'>Nenhuma regra especial ativa.<br>Jogue o padrão!</p>";
+        } else {
+            containerRegras.innerHTML = regrasAtivas.map(regra => {
+                const desc = explicacoes[regra] || "Sem descrição disponível.";
+                return `
+                    <div class="item-regra">
+                        <span>⚠️ ${regra.toUpperCase()}</span>
+                        <div class="info-wrapper">
+                            <div class="info-icon">i</div>
+                            <span class="tooltip-text">${desc}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    // Atualiza interface da mesa
     document.getElementById('txtVez').innerHTML = isMinhaVez ? `<b style="color:#4caf50">SUA VEZ!</b>` : `Vez de ${dados.turno}`;
     if (dados.cartaNaMesa) document.getElementById('cartaMesa').innerHTML = `<img src="${getNomeImagem(dados.cartaNaMesa)}">`;
 
